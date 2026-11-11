@@ -53,7 +53,10 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -e ".[dev,render]"
-      - run: python -m playwright install --with-deps chromium
+      # No --with-deps: the runner image already has Chrome's system libraries, and apt mirrors
+      # on the runner are a point of failure we do not need (ubuntu-26.04 could not resolve
+      # archive.ubuntu.com for hours on 2026-11-11).
+      - run: python -m playwright install chromium
       - run: pytest -q tests/test_render.py
       - name: Screenshots of the examples
         run: |
