@@ -174,7 +174,7 @@ gives you `tgwidget check|render|send|edit`, or run `scripts/widget.py` from a c
 | OpenClaw 2026.11.3 | `skills install git:…` from this repository, `skills info` shows it ready, gated on `python3`, primary env `TG_WIDGETS_BOT_TOKEN`; the installed CLI runs with macOS's Python 3.9 |
 | Hermes Agent v0.23.1 | `skills install HappySean2845/telegram-widget-skill/` passes the install scan (`safe`); the skill loads with its directory and required variable; after `hermes config set`, `TG_WIDGETS_BOT_TOKEN` reaches terminal subprocesses while `TELEGRAM_BOT_TOKEN` does not |
 | The real Bot API | 2026-11-11, private chat with a test bot: `send` and `edit` accepted by Telegram (`sendWidget`, `editMessageWidgetData`, `editMessageCaption`); the size limit matches the checker to the byte: 4096 bytes after `zlib` level 9 accepted, 4097 refused with `INPUT_MEDIA_WIDGET_TOO_LARGE` |
-| A real Telegram app | not yet confirmed |
+| A real Telegram app | 2026-11-11: the price-snapshot example, drawn from live NVDA data, displays correctly in the chat |
 | A full agent turn in either framework | not yet |
 
 ## Development

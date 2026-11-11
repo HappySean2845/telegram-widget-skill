@@ -159,7 +159,7 @@ openclaw skills install git:HappySean2845/telegram-widget-skill@main
 | OpenClaw 2026.11.3 | 从本仓库 `skills install git:…`，`skills info` 显示就绪，依赖 `python3`，主环境变量为 `TG_WIDGETS_BOT_TOKEN`；装好的命令行工具能用 macOS 自带的 Python 3.9 运行 |
 | Hermes Agent v0.23.1 | `skills install HappySean2845/telegram-widget-skill/` 通过安装扫描（`safe`）；skill 能正确加载目录和所需变量；`hermes config set` 之后 `TG_WIDGETS_BOT_TOKEN` 能进终端子进程，`TELEGRAM_BOT_TOKEN` 进不去 |
 | 真实 Bot API | 2026-11-11，在和测试 bot 的私聊里：Telegram 接受了 `send` 和 `edit`（`sendWidget`、`editMessageWidgetData`、`editMessageCaption`）；大小上限和检查器分毫不差：`zlib` level 9 压缩后 4096 字节被接受，4097 字节被拒（`INPUT_MEDIA_WIDGET_TOO_LARGE`） |
-| 真实 Telegram 客户端 | 还没确认 |
+| 真实 Telegram 客户端 | 2026-11-11：price-snapshot 示例（NVDA 实时数据）在聊天里显示正常 |
 | 在任一框架里跑完整一轮 agent 对话 | 还没有 |
 
 ## 开发
