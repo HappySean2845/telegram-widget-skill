@@ -39,9 +39,11 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install pytest
-      - name: Hide node
-        run: for n in $(which -a node); do sudo rm -f "$n"; done; ! command -v node
-      - run: pytest -q tests/test_engines.py tests/test_send.py
+      - name: Tests with only Python on the PATH
+        run: |
+          export PATH="$(dirname "$(command -v python)"):/usr/bin:/bin"
+          if command -v node; then echo "node is still on the PATH"; exit 1; fi
+          python -m pytest -q tests/test_engines.py tests/test_send.py
 
   render:
     runs-on: ubuntu-latest

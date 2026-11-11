@@ -105,7 +105,7 @@ BAD = {
     "javascript url": ("<a href=\"javascript:alert(1)\">x</a>", "link-not-allowed"),
     "img src remote": ("<img src=\"https://example.com/a.png\">", "html-external"),
     # code that hides what it does
-    "eval": (script("eval('1+1');"), "js-dynamic-code"),
+    "eval": (script("const r = eval(code);"), "js-dynamic-code"),
     "new Function": (script("const f = new Function('return 1');"), "js-dynamic-code"),
     "atob": (script("const s = atob('aHR0cHM6Ly9ldmls');"), "js-dynamic-code"),
     "fromCharCode": (script("const s = String.fromCharCode(104, 116);"), "js-dynamic-code"),

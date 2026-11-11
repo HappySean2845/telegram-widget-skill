@@ -62,7 +62,7 @@ def _read_escape(src: str, i: int, line: int):
     if i >= len(src):
         raise LexError("unterminated escape", line)
     c = src[i]
-    if c in "\r\n  ":  # line continuation
+    if c in "\r\n\u2028\u2029":  # line continuation
         if c == "\r" and src[i + 1:i + 2] == "\n":
             return "", i + 2, 1
         return "", i + 1, 1
@@ -139,7 +139,7 @@ def tokenize(src: str, first_line: int = 1) -> List[Token]:
             line += 1
             i += 1
             continue
-        if c in " \t\r\f\v ﻿  ":
+        if c in " \t\r\f\v\u00a0\ufeff\u2028\u2029":
             i += 1
             continue
         # comments (and the HTML-like <!-- --> that scripts tolerate)

@@ -36,13 +36,16 @@ def available_engine() -> str:
     return "basic"
 
 
+# The Function constructor compiles the widget's code into a function that is never called.
+_COMPILE_ONLY = "function compile(src) { new Function(src); }"
+
+
 def _quickjs(code: str) -> Optional[Tuple[str, Optional[int]]]:
-    ctx = quickjs.Context()
-    ctx.set_time_limit(2)
-    ctx.set_memory_limit(64 * 1024 * 1024)
-    ctx.set("src", code)
+    compile_only = quickjs.Function("compile", _COMPILE_ONLY)
+    compile_only.set_time_limit(2)
+    compile_only.set_memory_limit(64 * 1024 * 1024)
     try:
-        ctx.eval("new Function(src)")  # compiles the body, never runs it
+        compile_only(code)
     except Exception as e:  # quickjs.JSException
         text = str(e)
         first = text.splitlines()[0] if text else "SyntaxError"
