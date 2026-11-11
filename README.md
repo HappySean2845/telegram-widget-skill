@@ -108,8 +108,10 @@ hermes config set TG_WIDGETS_ALLOWED_LINKS "example.com t.me/YourBot"   # option
 - The chat comes from the session: Hermes puts the current chat id into the terminal's
   environment (`HERMES_SESSION_CHAT_ID`), and `send` uses it. A `--chat-id` naming another
   chat is refused.
-- Hermes scans community skills on install. This repository keeps tests and docs out of the
-  scan with `.skillignore`.
+- Hermes scans community skills on install; this one gets a `safe` verdict. The install
+  downloads the repository file by file through the GitHub API, which takes a minute; if it
+  stops on the API rate limit, set `GITHUB_TOKEN` or log in with `gh`.
+- The skill shows up as `telegram-widgets` (its folder is named after the repository).
 
 ### OpenClaw
 
@@ -147,15 +149,30 @@ gives you `tgwidget check|render|send|edit`, or run `scripts/widget.py` from a c
   forwards are test-server only for now; `send` refuses non-private chat ids unless
   `--test-env` is given.
 - **No interactive requests yet.** A widget can call `TelegramWidget.request()`, which reaches
-  the bot as a `widget_query` update that must be answered within 15 seconds. Neither
-  framework hands that update to skills today (see the install notes), so v1 widgets are
-  snapshots drawn from `chat_data`, and the agent updates them with `edit`
-  (`editMessageWidgetData`). `--allow-queries` exists for bots that do handle `widget_query`.
-  Next: small plugins/patches for both frameworks that route `widget_query` to a handler.
+  the bot as a `widget_query` update that must be answered within 15 seconds. No skill can
+  answer it today: Hermes never receives the update (it subscribes to python-telegram-bot's
+  list of update types, which predates widgets), OpenClaw releases up to 2026.11.3 do not
+  subscribe to it, and OpenClaw's `main` answers every `widget_query` itself, with no data,
+  forwarding taps on its own `show_widget` widgets to the agent. So v1 widgets are snapshots
+  drawn from `chat_data`, and the agent updates them with `edit` (`editMessageWidgetData`).
+  `--allow-queries` exists for bots that do handle `widget_query`. Next: a Hermes plugin that
+  subscribes to `widget_query` and answers it, and the same hook for OpenClaw.
 - The render check approximates Telegram's default styles; a browser draws things Telegram
   removes, so `render` complements `check`, it does not replace it.
 - Which Telegram app versions support widgets is not published; apps without support show
   "unsupported message" plus the caption, which is why `send` requires a caption.
+
+## What has been tested
+
+| | Status |
+|---|---|
+| Checker and CLI | 149 tests: every example, a set of good widgets, and one bad widget per rule (links, dynamic code, profile, sizes) |
+| `send` / `edit` | against a local fake Bot API: payloads, refusal before any request, Telegram errors, network errors, the token never in the output |
+| Render | the examples in headless Chromium, light and dark, under 560 px at 320 px width |
+| OpenClaw 2026.11.3 | `skills install git:…` from this repository, `skills info` shows it ready, gated on `python3`, primary env `TG_WIDGETS_BOT_TOKEN`; the installed CLI runs with macOS's Python 3.9 |
+| Hermes Agent v0.23.1 | `skills install HappySean2845/telegram-widget-skill/` passes the install scan (`safe`); the skill loads with its directory and required variable; after `hermes config set`, `TG_WIDGETS_BOT_TOKEN` reaches terminal subprocesses while `TELEGRAM_BOT_TOKEN` does not |
+| A real Telegram app | not yet |
+| A full agent turn in either framework | not yet |
 
 ## Development
 
