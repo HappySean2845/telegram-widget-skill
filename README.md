@@ -1,0 +1,123 @@
+# telegram-widget-skill
+
+Let your Telegram AI agent draw **HTML widgets** inside the chat: price cards, poll results,
+checklists, small charts, countdowns. The agent writes the widget, a strict checker validates
+it, and only then is it sent with Telegram's `sendWidget`.
+
+Works as a skill for **[Hermes Agent](https://github.com/NousResearch/hermes-agent)** and
+**[OpenClaw](https://github.com/openclaw/openclaw)** (both read the same `SKILL.md`), and as a
+plain CLI for any other bot.
+
+<p align="center"><img src="docs/examples.png" width="680" alt="The five example widgets, light and dark"></p>
+
+## Why
+
+On November 9, 2026 Telegram shipped [Bot API 10.4](https://core.telegram.org/bots/api-changelog):
+bots can now send a widget, one self-contained HTML document that runs inside the message
+bubble on every Telegram app. Models write HTML well, but widgets have sharp edges:
+
+- the app **silently removes** everything outside the "widget profile" (no `vh`, no inputs,
+  no `position: sticky`, no network, no external images, ...), so a widget that looks fine in a
+  browser comes out broken in Telegram;
+- the server refuses anything over **4096 bytes after zlib**, and the HTML can **never be
+  changed** after sending;
+- a model that read a web page or a tweet can be talked into putting a **phishing link** into a
+  pretty card that the user then taps.
+
+This skill gives the agent the rules, a checker that returns machine-readable errors it can fix,
+and a sender that refuses to send anything the checker rejects.
+
+## What is in the skill
+
+```
+skills/telegram-widgets/
+  SKILL.md                    when and how the agent should use widgets
+  references/widget-rules.md  the widget rules, condensed for a model
+  examples/*.html, *.json     five widgets drawn from chat_data, with sample state
+  scripts/widget.py           the CLI (Python 3.9+, standard library only)
+  scripts/tgwidget/           its code
+```
+
+```bash
+python3 scripts/widget.py check  card.html --chat-data @state.json   # validate, JSON out
+python3 scripts/widget.py render card.html --out card.png             # optional: headless Chromium
+python3 scripts/widget.py send   card.html --chat-id 123 --caption "BTC $67,250" --chat-data @state.json
+python3 scripts/widget.py edit   --chat-id 123 --message-id 456 --chat-data @new-state.json
+```
+
+The bot token comes from `TELEGRAM_BOT_TOKEN` (or `TG_WIDGET_BOT_TOKEN`). No output ever
+contains it: errors carry only Telegram's `description`, never an HTTP library's message
+(which includes the request URL, and the URL includes the token).
+
+## The checker
+
+`check` prints one JSON object: `ok`, `errors`, `warnings` (each with `rule`, `message`,
+`line` and a `hint` telling the model how to fix it) and `stats` (sizes, budget left).
+`send` runs the same check (plus the state and the caption) and sends nothing unless it passes.
+
+| Area | What it enforces |
+|---|---|
+| Size | ≤ 32768 bytes of UTF-8, ≤ 4096 bytes after `zlib.compress(html, 9)` (counted exactly like the server), no NUL, valid UTF-8; `chat_data`/`public_data` ≤ 1024 bytes |
+| HTML / SVG | no form controls, media, iframes, `<script src>`, remote images, `data:` SVG images, presentational or focus attributes, `clipPath`/`mask`/SMIL/`foreignObject`, ... |
+| CSS | no `vh`-family units, `overflow: auto/scroll`, `position: sticky`, logical properties, multi-column, `oklch()`/`color-mix()`, `text-shadow`, line clamp, 3D transforms, filters other than blur/brightness/drop-shadow, `clip-path`, masks, blend modes, named fonts, `@font-face`/`@import`/`@container`/`@layer`, nesting, `:has()`/`:focus`, `@media (hover/pointer/print)`, remote `url()` |
+| JavaScript | syntax (QuickJS, else Node, else a structural check); no network APIs, navigation, dialogs, clipboard, canvas read-back, WebGL, touch/keyboard/scroll events |
+| **Links** | see below |
+| Limits | 2000 nodes, 400 CSS rules, 32 `@keyframes`, 8 K characters per attribute (this includes `data:` image URLs) |
+
+### Links: if the checker cannot prove where a link goes, it refuses the widget
+
+- Links may only be opened with **one literal URL** in one of four forms:
+  `TelegramWidget.openLink('https://…')`, `TelegramWidget.openTelegramLink('https://t.me/…')`,
+  `window.open('https://…')` or `<a href="https://…">`.
+- The host must be on the **operator's allowlist**, `TG_WIDGET_ALLOWED_LINKS`
+  (`example.com`, `*.example.com`, `t.me/YourBot`). **Empty by default: no links at all.**
+  There is no command-line flag for it, because the model writes the command line.
+- Any URL-looking text anywhere (strings, attributes, text, CSS, state, caption) must pass the
+  same allowlist, after decoding escapes (`'https://…'` is `https://…`).
+- Everything that could assemble a name or a URL out of pieces is refused: `eval`, `Function`,
+  `.constructor`, `atob`, `String.fromCharCode`, `import()`, string-argument timers, unicode
+  escapes in identifiers, `'a' + 'b'` literal splicing, computed access with string keys or on
+  `window`/`document`/`TelegramWidget`, passing `TelegramWidget` around, `innerHTML` and every
+  other HTML-from-string API, setting `href`/`src`/`on*` from code.
+
+**Threat model.** This is a guardrail for an agent that follows its skill, so that content it
+read cannot steer it into shipping a phishing card. It is not a sandbox against the agent
+itself: an agent with an unrestricted shell and the bot token can call the Bot API directly.
+If you need that guarantee, keep the token out of the agent's shell and expose `send` as the
+only way to reach Telegram.
+
+## Install
+
+<!-- FRAMEWORKS -->
+
+## Limits and roadmap
+
+- **Production widgets only work in the private chat with the bot.** Groups, inline mode and
+  forwards are test-server only for now; `send` refuses non-private chat ids unless
+  `--test-env` is given.
+- **No interactive requests yet.** A widget can call `TelegramWidget.request()`, which reaches
+  the bot as a `widget_query` update that must be answered within 15 seconds. Neither
+  framework hands that update to skills today (see the install notes), so v1 widgets are
+  snapshots drawn from `chat_data`, and the agent updates them with `edit`
+  (`editMessageWidgetData`). `--allow-queries` exists for bots that do handle `widget_query`.
+  Next: small plugins/patches for both frameworks that route `widget_query` to a handler.
+- The render check approximates Telegram's default styles; a browser draws things Telegram
+  removes, so `render` complements `check`, it does not replace it.
+- Which Telegram app versions support widgets is not published; apps without support show
+  "unsupported message" plus the caption, which is why `send` requires a caption.
+
+## Development
+
+```bash
+python -m venv .venv && .venv/bin/pip install -e ".[dev,render]"
+.venv/bin/python -m playwright install chromium
+.venv/bin/pytest
+```
+
+## Credits
+
+The widget rules are adapted from Telegram's guide
+[Telegram Widgets](https://core.telegram.org/bots/widgets.md), section "Writing widgets with
+an LLM". This project is not affiliated with Telegram, Nous Research or OpenClaw.
+
+MIT License.

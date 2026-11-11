@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.9", "3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: pip install -e ".[dev]"
+      - run: pytest -q
+      - name: Examples pass the checker through the launcher, without installing
+        run: |
+          for f in skills/telegram-widgets/examples/*.html; do
+            python skills/telegram-widgets/scripts/widget.py check "$f" --chat-data "@${f%.html}.json" --text
+          done
+
+  no-engine:
+    # no quickjs, no node: the structural fallback must still work
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pytest
+      - name: Hide node
+        run: for n in $(which -a node); do sudo rm -f "$n"; done; ! command -v node
+      - run: pytest -q tests/test_engines.py tests/test_send.py
+
+  render:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[dev,render]"
+      - run: python -m playwright install --with-deps chromium
+      - run: pytest -q tests/test_render.py
+      - name: Screenshots of the examples
+        run: |
+          mkdir -p shots
+          for f in skills/telegram-widgets/examples/*.html; do
+            b=$(basename "${f%.html}")
+            tgwidget render "$f" --chat-data "@${f%.html}.json" --out "shots/$b.png" --scheme dark
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: example-screenshots
+          path: shots/
