@@ -1,5 +1,7 @@
 # telegram-widget-skill
 
+**English** | [简体中文](README.zh-CN.md)
+
 Let your Telegram AI agent draw **HTML widgets** inside the chat: price cards, poll results,
 checklists, small charts, countdowns. The agent writes the widget, a strict checker validates
 it, and only then is it sent with Telegram's `sendWidget`.
