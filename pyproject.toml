@@ -22,7 +22,7 @@ tgwidget = "tgwidget.cli:main"
 Homepage = "https://github.com/HappySean2845/telegram-widget-skill"
 
 [tool.setuptools]
-package-dir = { "" = "skills/telegram-widgets/scripts" }
+package-dir = { "" = "scripts" }
 packages = ["tgwidget"]
 
 [tool.pytest.ini_options]

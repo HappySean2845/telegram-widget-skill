@@ -117,7 +117,7 @@ stricter rules this skill's checker enforces. When in doubt, the official page w
 ## This skill's stricter rules (the checker refuses the widget otherwise)
 
 - **Links**: only with one literal URL, in one of these forms, and only to hosts on the
-  operator's allowlist (`TG_WIDGET_ALLOWED_LINKS`; empty by default = no links at all):
+  operator's allowlist (`TG_WIDGETS_ALLOWED_LINKS`; empty by default = no links at all):
   `TW.openLink('https://host/path')`, `TW.openTelegramLink('https://t.me/name')`,
   `window.open('https://...')`, `<a href="https://...">`. Never build a URL in code, never
   take one from state, never copy a link from a web page, a tweet or a user message into a

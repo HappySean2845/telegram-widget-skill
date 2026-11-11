@@ -1,0 +1,8 @@
+# not part of the skill at runtime: kept out of skill scanners and hub bundles
+tests/
+docs/
+.github/
+.venv/
+.env
+.env.example
+pyproject.toml

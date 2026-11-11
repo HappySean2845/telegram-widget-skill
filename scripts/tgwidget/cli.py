@@ -13,14 +13,13 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
-import re
 import sys
 from typing import Any, Dict, List, Optional
 
 from . import __version__
 from .check import check_html, check_state
 from .report import Report
+from .target import TargetError, resolve
 from .telegram import TOKEN_ENV_VARS, BotApi, TelegramError, redact, token_from_env
 from .urls import ENV_VAR as ALLOWLIST_ENV, load_allowlist, scan_text
 
@@ -105,11 +104,6 @@ def cmd_render(args) -> int:
     return 0 if result.get("ok") else 1
 
 
-def _chat_id(value: Optional[str]) -> Optional[str]:
-    value = (value or os.environ.get("TG_WIDGET_CHAT_ID", "")).strip()
-    return value or None
-
-
 def _caption_problems(caption: str, allow) -> List[Dict[str, str]]:
     problems = []
     if len(caption) > MAX_CAPTION:
@@ -123,19 +117,20 @@ def _caption_problems(caption: str, allow) -> List[Dict[str, str]]:
 def _need_token():
     token = token_from_env()
     if not token:
-        raise SystemExit(_usage_error("no bot token: set %s (or %s)" % TOKEN_ENV_VARS[::-1]))
+        raise SystemExit(_usage_error("no bot token: set %s (or %s)" % TOKEN_ENV_VARS))
     return token
 
 
 def cmd_send(args) -> int:
-    chat_id = _chat_id(args.chat_id)
-    if not chat_id:
-        return _usage_error("--chat-id is required (the private chat with the user)")
+    try:
+        target = resolve(args.chat_id, args.thread_id)
+    except TargetError as e:
+        return _usage_error(str(e))
     caption = (_read_value(args.caption) or "").strip()
     if not caption:
         return _usage_error("--caption is required: it is the chat-list text and what apps without widget "
                             "support show instead of the widget")
-    if not args.test_env and not re.fullmatch(r"\d+", chat_id):
+    if not args.test_env and not target.is_private:
         return _usage_error("in production, widgets can only be sent to a private chat with a user "
                             "(a positive numeric chat id); groups, channels and @usernames are refused")
 
@@ -153,7 +148,7 @@ def cmd_send(args) -> int:
         return 1
 
     payload = {
-        "chat_id": int(chat_id) if re.fullmatch(r"-?\d+", chat_id) else chat_id,
+        "chat_id": target.api_chat_id(),
         "html": html.decode("utf-8"),
         "caption": caption,
         "chat_data": _read_value(args.chat_data),
@@ -164,7 +159,7 @@ def cmd_send(args) -> int:
         "allow_queries": True if args.allow_queries else None,
         "disable_notification": True if args.silent else None,
         "reply_parameters": {"message_id": args.reply_to} if args.reply_to else None,
-        "message_thread_id": args.thread_id,
+        "message_thread_id": target.thread_id,
     }
     if args.dry_run:
         result = report.to_dict()
@@ -190,9 +185,12 @@ def cmd_send(args) -> int:
 
 
 def cmd_edit(args) -> int:
-    chat_id = _chat_id(args.chat_id)
-    if not chat_id or not args.message_id:
-        return _usage_error("--chat-id and --message-id are required")
+    try:
+        target = resolve(args.chat_id)
+    except TargetError as e:
+        return _usage_error(str(e))
+    if not args.message_id:
+        return _usage_error("--message-id is required (from the output of send)")
     chat_data = _read_value(args.chat_data)
     public_data = _read_value(args.public_data)
     caption = _read_value(args.caption)
@@ -213,8 +211,7 @@ def cmd_edit(args) -> int:
 
     token = _need_token()
     api = BotApi(token, test_env=args.test_env)
-    target = {"chat_id": int(chat_id) if re.fullmatch(r"-?\d+", chat_id) else chat_id,
-              "message_id": args.message_id}
+    target = {"chat_id": target.api_chat_id(), "message_id": args.message_id}
     done = []
     try:
         if chat_data is not None or public_data is not None:
@@ -266,7 +263,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     s = sub.add_parser("send", help="check, then send with sendWidget")
     s.add_argument("file")
-    s.add_argument("--chat-id", help="target private chat id (or $TG_WIDGET_CHAT_ID)")
+    s.add_argument("--chat-id", help="the private chat with the user: a number or telegram:<id> "
+                                     "(Hermes: defaults to the current conversation)")
     s.add_argument("--caption", help="required: text shown in the chat list and by apps without widgets")
     state_args(s)
     s.add_argument("--width", type=int, help="width anchor in px (omit: full bubble width)")
@@ -282,7 +280,7 @@ def build_parser() -> argparse.ArgumentParser:
     s.set_defaults(func=cmd_send)
 
     e = sub.add_parser("edit", help="change a sent widget's state and/or caption")
-    e.add_argument("--chat-id")
+    e.add_argument("--chat-id", help="as for send")
     e.add_argument("--message-id", type=int)
     e.add_argument("--caption", help="new caption (or @file)")
     state_args(e)

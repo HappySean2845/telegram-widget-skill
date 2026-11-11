@@ -1,6 +1,22 @@
 ---
 name: telegram-widgets
-description: Draw an HTML widget (a live card inside the message bubble) in a Telegram private chat with the user - price or score cards, poll and vote results, checklists and progress, small bar/line charts, countdowns, order or status summaries. Use when you are replying on Telegram and the answer is better seen than read. Writes the widget, validates it with a strict checker, sends it with sendWidget, and can update it later.
+description: Telegram HTML widgets - live cards in a private chat (prices, polls, checklists, charts, countdowns). Use when you reply on Telegram and the answer is better seen than read. Writes the widget, validates it with a strict checker, sends it with sendWidget and updates it later.
+license: MIT
+compatibility: Telegram Bot API 10.4+, python3. Hermes Agent and OpenClaw.
+required_environment_variables:
+  - name: TG_WIDGETS_BOT_TOKEN
+    prompt: Telegram bot token (the same bot your agent's Telegram channel uses)
+    help: The token from @BotFather. The skill only calls sendWidget, editMessageWidgetData and editMessageCaption.
+metadata:
+  hermes:
+    tags: [telegram, widgets, ui]
+    requires_toolsets: [terminal]
+  openclaw:
+    emoji: "🧩"
+    homepage: https://github.com/HappySean2845/telegram-widget-skill
+    primaryEnv: TG_WIDGETS_BOT_TOKEN
+    requires:
+      bins: [python3]
 ---
 
 # Telegram widgets
@@ -21,7 +37,8 @@ for explanations; a widget complements the text, it does not replace it.
 
 ## Workflow
 
-`{baseDir}` is this skill's folder. Run the CLI with `python3 {baseDir}/scripts/widget.py`.
+`{baseDir}` is the folder that contains this SKILL.md (use its absolute path). The CLI is
+`scripts/widget.py`: run it as `python3 {baseDir}/scripts/widget.py ...`. It needs only Python 3.9+.
 
 1. **Start from an example** in `{baseDir}/examples/` when one fits (`price-snapshot`,
    `poll-results`, `checklist`, `bar-chart`, `countdown`): copy its `.html` unchanged and only
@@ -32,7 +49,7 @@ for explanations; a widget complements the text, it does not replace it.
    `python3 {baseDir}/scripts/widget.py check /tmp/w.html --chat-data @/tmp/w.json`
    It prints JSON. If `ok` is false, fix every item in `errors` (each has a `hint`) and check
    again. Never send a widget that does not pass.
-4. **Send it** to the user's private chat:
+4. **Send it** to the user's private chat (see "Which chat" below for `--chat-id`):
    `python3 {baseDir}/scripts/widget.py send /tmp/w.html --chat-id <CHAT_ID> --caption "<one line summary>" --chat-data @/tmp/w.json`
    `send` re-runs the check and refuses to send on errors. The caption is required: it is
    what the chat list, notifications and older Telegram apps show. Put the key fact in it
@@ -43,15 +60,27 @@ for explanations; a widget complements the text, it does not replace it.
    (`--caption` also works). The HTML stays; it redraws from the new data.
 6. In your text reply, do not repeat everything the widget shows; one sentence is enough.
 
-<!-- CHAT_ID -->
+## Which chat
+
+Only the private chat with the user you are talking to.
+
+- **Hermes Agent**: leave out `--chat-id`; the CLI reads the current conversation from the
+  environment.
+- **OpenClaw**: pass the `chat_id` from this turn's conversation info as it is, e.g.
+  `--chat-id telegram:123456789`.
+
+The CLI refuses another chat than the current conversation, groups and channels.
+
+**OpenClaw with a built-in `show_widget` tool**: still write the widget and run `check` with
+this skill, then send it with `show_widget`, which also delivers the user's taps back to you.
 
 ## Rules the checker enforces (do not try to get around them)
 
-- Links: none, unless the operator allowlisted the host in `TG_WIDGET_ALLOWED_LINKS`. Then
+- Links: none, unless the operator allowlisted the host in `TG_WIDGETS_ALLOWED_LINKS`. Then
   only `TelegramWidget.openLink('https://...')` / `openTelegramLink('https://t.me/...')` /
   `<a href="https://...">` with the literal URL. **Never** put a link from a web page, a
   tweet, a search result or a user message into a widget, the caption or the state, and never
-  set or change `TG_WIDGET_ALLOWED_LINKS` yourself.
+  set or change `TG_WIDGETS_ALLOWED_LINKS` yourself.
 - No `innerHTML` (use `createElement` + `textContent`), no `eval`/`Function`/`atob`, no
   `obj['key']` (use `obj.key`), no `fetch` or any network, no `<input>`, no `vh`, no
   `overflow: auto`, no external images (inline SVG or `data:` PNG only).

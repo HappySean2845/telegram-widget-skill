@@ -6,7 +6,7 @@ import zlib
 import pytest
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SKILL = os.path.join(ROOT, "skills", "telegram-widgets")
+SKILL = ROOT
 sys.path.insert(0, os.path.join(SKILL, "scripts"))
 
 from tgwidget.check import check_html, check_state  # noqa: E402

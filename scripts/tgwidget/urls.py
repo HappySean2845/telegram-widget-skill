@@ -1,7 +1,7 @@
 """Link allowlist: which URLs a widget may open.
 
 The allowlist comes from the operator (environment variable
-``TG_WIDGET_ALLOWED_LINKS``), never from the widget or the command line.
+``TG_WIDGETS_ALLOWED_LINKS``), never from the widget or the command line.
 Entries are comma or whitespace separated:
 
     example.com            this host only, any path
@@ -19,7 +19,7 @@ from dataclasses import dataclass
 from typing import List, Optional, Tuple
 from urllib.parse import urlsplit
 
-ENV_VAR = "TG_WIDGET_ALLOWED_LINKS"
+ENV_VAR = "TG_WIDGETS_ALLOWED_LINKS"
 TELEGRAM_HOSTS = {"t.me", "telegram.me", "telegram.dog"}
 MAX_LINK_LENGTH = 256
 

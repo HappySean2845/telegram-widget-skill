@@ -4,7 +4,7 @@ import sys
 import pytest
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SKILL = os.path.join(ROOT, "skills", "telegram-widgets")
+SKILL = ROOT
 sys.path.insert(0, os.path.join(SKILL, "scripts"))
 
 pytest.importorskip("playwright.sync_api")

@@ -26,8 +26,8 @@ jobs:
       - run: pytest -q
       - name: Examples pass the checker through the launcher, without installing
         run: |
-          for f in skills/telegram-widgets/examples/*.html; do
-            python skills/telegram-widgets/scripts/widget.py check "$f" --chat-data "@${f%.html}.json" --text
+          for f in examples/*.html; do
+            python scripts/widget.py check "$f" --chat-data "@${f%.html}.json" --text
           done
 
   no-engine:
@@ -56,7 +56,7 @@ jobs:
       - name: Screenshots of the examples
         run: |
           mkdir -p shots
-          for f in skills/telegram-widgets/examples/*.html; do
+          for f in examples/*.html; do
             b=$(basename "${f%.html}")
             tgwidget render "$f" --chat-data "@${f%.html}.json" --out "shots/$b.png" --scheme dark
           done

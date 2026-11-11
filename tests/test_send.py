@@ -8,7 +8,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 import pytest
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SKILL = os.path.join(ROOT, "skills", "telegram-widgets")
+SKILL = ROOT
 sys.path.insert(0, os.path.join(SKILL, "scripts"))
 
 from tgwidget.cli import main  # noqa: E402
@@ -62,9 +62,12 @@ class FakeBotApi:
 def api(monkeypatch):
     fake = FakeBotApi()
     monkeypatch.setenv("TELEGRAM_BOT_TOKEN", TOKEN)
-    monkeypatch.setenv("TG_WIDGET_API_BASE", fake.base)
-    monkeypatch.delenv("TG_WIDGET_BOT_TOKEN", raising=False)
-    monkeypatch.delenv("TG_WIDGET_ALLOWED_LINKS", raising=False)
+    monkeypatch.setenv("TG_WIDGETS_API_BASE", fake.base)
+    monkeypatch.delenv("TG_WIDGETS_BOT_TOKEN", raising=False)
+    monkeypatch.delenv("TG_WIDGETS_ALLOWED_LINKS", raising=False)
+    for name in ("TG_WIDGETS_CHAT_ID", "HERMES_SESSION_PLATFORM", "HERMES_SESSION_CHAT_ID",
+                 "HERMES_SESSION_THREAD_ID", "OPENCLAW_CHANNEL_CONTEXT"):
+        monkeypatch.delenv(name, raising=False)
     for name in ("HTTP_PROXY", "HTTPS_PROXY", "http_proxy", "https_proxy", "ALL_PROXY", "all_proxy"):
         monkeypatch.delenv(name, raising=False)
     monkeypatch.setenv("NO_PROXY", "127.0.0.1")
@@ -131,7 +134,7 @@ def test_network_error_does_not_leak_the_token(monkeypatch, capsys):
         s.bind(("127.0.0.1", 0))
         port = s.getsockname()[1]
     monkeypatch.setenv("TELEGRAM_BOT_TOKEN", TOKEN)
-    monkeypatch.setenv("TG_WIDGET_API_BASE", "http://127.0.0.1:%d" % port)
+    monkeypatch.setenv("TG_WIDGETS_API_BASE", "http://127.0.0.1:%d" % port)
     monkeypatch.setenv("NO_PROXY", "127.0.0.1")
     code, out = run(capsys, "send", EXAMPLE, "--chat-id", "1001", "--caption", "x")
     assert code == 1 and "network error" in out["telegram_error"]["description"]
@@ -160,6 +163,40 @@ def test_edit_refuses_links_in_state(api, capsys):
 
 def test_missing_token(monkeypatch, capsys):
     monkeypatch.delenv("TELEGRAM_BOT_TOKEN", raising=False)
-    monkeypatch.delenv("TG_WIDGET_BOT_TOKEN", raising=False)
+    monkeypatch.delenv("TG_WIDGETS_BOT_TOKEN", raising=False)
     code, out = run(capsys, "send", EXAMPLE, "--chat-id", "1001", "--caption", "x")
     assert code == 2 and "bot token" in out["errors"][0]["message"]
+
+
+def test_openclaw_style_chat_reference(api, capsys):
+    code, out = run(capsys, "send", EXAMPLE, "--chat-id", "telegram:1001:topic:7", "--caption", "x")
+    assert code == 0
+    body = api.calls[-1][2]
+    assert body["chat_id"] == 1001 and body["message_thread_id"] == 7
+
+
+def test_hermes_session_is_the_default_and_the_only_target(api, capsys, monkeypatch):
+    monkeypatch.setenv("HERMES_SESSION_PLATFORM", "telegram")
+    monkeypatch.setenv("HERMES_SESSION_CHAT_ID", "1001")
+    code, out = run(capsys, "send", EXAMPLE, "--caption", "x")
+    assert code == 0 and api.calls[-1][2]["chat_id"] == 1001
+    code, out = run(capsys, "send", EXAMPLE, "--chat-id", "2002", "--caption", "x")
+    assert code == 2 and "not the current conversation" in out["errors"][0]["message"]
+    code, out = run(capsys, "edit", "--chat-id", "2002", "--message-id", "5", "--chat-data", "{}")
+    assert code == 2
+    assert len(api.calls) == 1
+
+
+def test_not_telegram(api, capsys, monkeypatch):
+    monkeypatch.setenv("HERMES_SESSION_PLATFORM", "discord")
+    monkeypatch.setenv("HERMES_SESSION_CHAT_ID", "1001")
+    code, out = run(capsys, "send", EXAMPLE, "--caption", "x")
+    assert code == 2 and "not Telegram" in out["errors"][0]["message"]
+    assert api.calls == []
+
+
+def test_dedicated_token_variable_wins(api, capsys, monkeypatch):
+    monkeypatch.setenv("TG_WIDGETS_BOT_TOKEN", "42:other-token-abcdefgh")
+    assert main(["send", EXAMPLE, "--chat-id", "1001", "--caption", "x"]) == 0
+    assert "other-token" not in capsys.readouterr().out
+    assert "/bot42:other-token-abcdefgh/" in api.calls[-1][0]

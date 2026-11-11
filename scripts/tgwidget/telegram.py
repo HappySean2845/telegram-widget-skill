@@ -15,8 +15,8 @@ import urllib.error
 import urllib.request
 from typing import Any, Dict, Optional
 
-TOKEN_ENV_VARS = ("TG_WIDGET_BOT_TOKEN", "TELEGRAM_BOT_TOKEN")
-API_BASE_ENV = "TG_WIDGET_API_BASE"
+TOKEN_ENV_VARS = ("TG_WIDGETS_BOT_TOKEN", "TELEGRAM_BOT_TOKEN")
+API_BASE_ENV = "TG_WIDGETS_API_BASE"
 DEFAULT_API_BASE = "https://api.telegram.org"
 
 

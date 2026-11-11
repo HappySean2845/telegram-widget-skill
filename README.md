@@ -29,13 +29,14 @@ and a sender that refuses to send anything the checker rejects.
 
 ## What is in the skill
 
+The repository root is the skill folder (OpenClaw installs from git need `SKILL.md` there).
+
 ```
-skills/telegram-widgets/
-  SKILL.md                    when and how the agent should use widgets
-  references/widget-rules.md  the widget rules, condensed for a model
-  examples/*.html, *.json     five widgets drawn from chat_data, with sample state
-  scripts/widget.py           the CLI (Python 3.9+, standard library only)
-  scripts/tgwidget/           its code
+SKILL.md                    when and how the agent should use widgets
+references/widget-rules.md  the widget rules, condensed for a model
+examples/*.html, *.json     five widgets drawn from chat_data, with sample state
+scripts/widget.py           the CLI (Python 3.9+, standard library only)
+scripts/tgwidget/           its code
 ```
 
 ```bash
@@ -45,7 +46,7 @@ python3 scripts/widget.py send   card.html --chat-id 123 --caption "BTC $67,250"
 python3 scripts/widget.py edit   --chat-id 123 --message-id 456 --chat-data @new-state.json
 ```
 
-The bot token comes from `TELEGRAM_BOT_TOKEN` (or `TG_WIDGET_BOT_TOKEN`). No output ever
+The bot token comes from `TG_WIDGETS_BOT_TOKEN`, else `TELEGRAM_BOT_TOKEN`. No output ever
 contains it: errors carry only Telegram's `description`, never an HTTP library's message
 (which includes the request URL, and the URL includes the token).
 
@@ -69,7 +70,7 @@ contains it: errors carry only Telegram's `description`, never an HTTP library's
 - Links may only be opened with **one literal URL** in one of four forms:
   `TelegramWidget.openLink('https://…')`, `TelegramWidget.openTelegramLink('https://t.me/…')`,
   `window.open('https://…')` or `<a href="https://…">`.
-- The host must be on the **operator's allowlist**, `TG_WIDGET_ALLOWED_LINKS`
+- The host must be on the **operator's allowlist**, `TG_WIDGETS_ALLOWED_LINKS`
   (`example.com`, `*.example.com`, `t.me/YourBot`). **Empty by default: no links at all.**
   There is no command-line flag for it, because the model writes the command line.
 - Any URL-looking text anywhere (strings, attributes, text, CSS, state, caption) must pass the
@@ -88,7 +89,57 @@ only way to reach Telegram.
 
 ## Install
 
-<!-- FRAMEWORKS -->
+Both frameworks read the same `SKILL.md`. The skill needs `python3` (3.9+) on the machine
+where the agent runs its shell commands, and the token of the bot your agent already uses.
+`quickjs` (`pip install quickjs`) makes the JavaScript syntax check exact; without it the
+checker falls back to `node --check`, then to a structural check.
+
+### Hermes Agent
+
+```bash
+hermes skills install HappySean2845/telegram-widget-skill/
+hermes config set TG_WIDGETS_BOT_TOKEN <the same token as TELEGRAM_BOT_TOKEN>
+hermes config set TG_WIDGETS_ALLOWED_LINKS "example.com t.me/YourBot"   # optional: hosts widgets may link to
+```
+
+- Hermes removes `TELEGRAM_BOT_TOKEN` from the environment of every tool subprocess, on
+  purpose, and a skill cannot ask for it back. So the skill declares its own variable,
+  `TG_WIDGETS_BOT_TOKEN`, which Hermes passes to the terminal once the skill is loaded.
+- The chat comes from the session: Hermes puts the current chat id into the terminal's
+  environment (`HERMES_SESSION_CHAT_ID`), and `send` uses it. A `--chat-id` naming another
+  chat is refused.
+- Hermes scans community skills on install. This repository keeps tests and docs out of the
+  scan with `.skillignore`.
+
+### OpenClaw
+
+```bash
+openclaw skills install git:HappySean2845/telegram-widget-skill@main
+```
+
+Then give the skill the bot token, either as the skill's key in `openclaw.json`:
+
+```json
+{ "skills": { "entries": { "telegram-widgets": { "apiKey": "<bot token>" } } } }
+```
+
+(`apiKey` also takes a SecretRef such as `{"source": "env", "provider": "default", "id": "TELEGRAM_BOT_TOKEN"}`),
+or nothing at all if the gateway already gets `TELEGRAM_BOT_TOKEN` from its environment:
+`exec` on the gateway host inherits it. A token that is only in `channels.telegram.botToken`
+is not visible to commands, so then set `apiKey`. Optional link allowlist:
+`skills.entries.telegram-widgets.env.TG_WIDGETS_ALLOWED_LINKS`.
+
+- The model passes the chat from the turn's conversation info as is
+  (`--chat-id telegram:123456789`); `send` understands that form.
+- With `exec` in a Docker sandbox, neither the token nor `python3` from the host are there.
+- OpenClaw's `main` branch (not yet in a release as of 2026-11-11) has its own `show_widget`
+  tool behind `channels.telegram.widgets: true`, which also routes taps back to the agent.
+  There, the skill tells the model to `check` with this skill and send with `show_widget`.
+
+### Any other bot
+
+The CLI is plain Python: `pip install "git+https://github.com/HappySean2845/telegram-widget-skill"`
+gives you `tgwidget check|render|send|edit`, or run `scripts/widget.py` from a checkout.
 
 ## Limits and roadmap
 

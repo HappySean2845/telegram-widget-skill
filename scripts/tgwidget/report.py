@@ -57,7 +57,7 @@ HINTS: Dict[str, str] = {
                     "TelegramWidget.openTelegramLink('https://t.me/...'), window.open('https://...') or "
                     "<a href=\"https://...\">, each with one literal URL. Never build URLs or link elements "
                     "in code.",
-    "link-not-allowed": "Only URLs on the operator's allowlist (TG_WIDGET_ALLOWED_LINKS) may appear in a "
+    "link-not-allowed": "Only URLs on the operator's allowlist (TG_WIDGETS_ALLOWED_LINKS) may appear in a "
                         "widget. Remove the link, or ask the operator to allowlist the host. Never add hosts "
                         "to the allowlist yourself.",
     "limits": "Stay inside the widget limits (references/widget-rules.md, LIMITS).",
