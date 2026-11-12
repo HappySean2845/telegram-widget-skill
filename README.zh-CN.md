@@ -2,7 +2,7 @@
 
 # Telegram Widget Skill
 
-**让 AI agent 在 Telegram 里回复实时卡片：模型来写，发出之前先验证。**
+**给 AI agent 用的 Telegram HTML 小组件（widget）：模型来写卡片，严格的检查器把关后才发出。**
 
 [![CI](https://github.com/HappySean2845/telegram-widget-skill/actions/workflows/ci.yml/badge.svg)](https://github.com/HappySean2845/telegram-widget-skill/actions/workflows/ci.yml)
 [![Telegram Bot API 10.4](https://img.shields.io/badge/Telegram%20Bot%20API-10.4-26A5E4?logo=telegram&logoColor=white)](https://core.telegram.org/bots/api-changelog)
@@ -19,15 +19,20 @@
 
 <br>
 
-Telegram [Bot API 10.4](https://core.telegram.org/bots/api-changelog) 让 bot 可以用 **HTML widget**
-回复消息：一张自包含的卡片，直接在消息气泡里运行，所有 Telegram 客户端都支持。
-对 AI agent 来说，这意味着不用再回一段堆满数字的文字，而是给用户一张一眼就能看懂的图表。
+**Telegram Widget Skill** 是一个开源的 agent skill 和命令行工具，让 AI agent 编写、检查并发送
+**Telegram HTML 小组件（widget）**：从 [Bot API 10.4](https://core.telegram.org/bots/api-changelog)
+（2026 年 11 月，`sendWidget`）开始，TG bot 可以在聊天消息里发送的交互式卡片。
+它支持 Hermes Agent 和 OpenClaw，也能作为普通的 Python 命令行工具配合任何 bot 使用。
 
-但 widget 的规矩很严。客户端会悄悄删掉规范以外的一切；压缩后超过 4 KB 服务器直接拒收；
+对 agent 来说，widget 意味着不用再回一段堆满数字的文字，而是给用户一张一眼就能看懂的图表。
+但它的规矩也很严：客户端会悄悄删掉规范以外的一切；压缩后超过 4 KB 服务器直接拒收；
 HTML 发出去就再也改不了；而只要被塞进一个恶意链接，一张好用的卡片就成了钓鱼陷阱。
 
-**Telegram Widget Skill** 把这些变成 agent 能稳定执行的流程：一份从 Telegram 规范提炼的写作指南、
-现成的模板、一个用模型能看懂的方式指出每个问题的严格检查器，以及一个检查不过就拒绝发送的发送命令。
+这个 skill 不提供一套写死的卡片，而是让 agent 按对话需要自己组织卡片，再在发出前用 Telegram 的规则把关：
+一份从规范提炼的写作指南、现成的模板、一个用模型能看懂的方式指出每个问题的检查器，
+以及一个检查不过就拒绝发送的发送命令。
+
+<sub>注意区分：这里说的是 bot 在聊天里发送的 widget，不是 Telegram 网站上的登录、帖子嵌入和评论组件（Login / Post / Discussion Widget）。</sub>
 
 ## 亮点
 
@@ -269,6 +274,54 @@ Telegram 报错时只返回 Telegram 的 `description`。
   所以 `render` 只是 `check` 的补充，不能代替它。
 - **旧版客户端**会显示「unsupported message」加上 caption，而不是 widget，所以每个 widget 发送时都必须带 caption。
 
+## 常见问题
+
+### Telegram 的 widget（小组件）是什么？
+
+Telegram widget 是 2026 年 11 月随 Bot API 10.4 推出的功能：bot 用 `sendWidget` 发送一份小型 HTML 文档，
+Telegram 在 iOS、Android、macOS、Telegram Desktop 和网页版上把它画在消息气泡里。
+它的 JavaScript 跑在不能联网的 QuickJS 沙箱里，bot 通过更新状态数据来改变它显示的内容。
+
+### Telegram widget 最大能多大？
+
+UTF-8 的 HTML 最多 32,768 字节，服务器用 zlib level 9 压缩后最多 4,096 字节。
+聊天状态（`chat_data`）和共享状态（`public_data`）各最多 1,024 字节。
+显示时宽 200 到 600 px、高 50 到 600 px，超出高度的部分会被裁掉。
+
+### widget 发出去之后还能改吗？
+
+HTML 不能改，状态可以：`editMessageWidgetData` 替换 `chat_data` 或 `public_data` 后 widget 会重绘，
+所以价格卡、清单都能原地更新。本 skill 的 `edit` 命令做的就是这件事，还能顺带改 caption。
+
+### bot 能把 widget 发到群里或频道吗？
+
+生产环境暂时不行。目前 widget 只能发在用户和 bot 的私聊里；群聊、inline 模式和转发只在 Telegram 的测试服务器上开放，
+频道则完全不能直接接收 widget。
+
+### widget 能联网拉实时数据吗？
+
+不能。widget 里所有网络 API 都会抛错，外部脚本、字体和图片一律不加载。
+数据只能通过 bot 写入的状态送进来，或者由 widget 发起请求（`TelegramWidget.request()`），
+bot 在 15 秒内用 `answerWidgetQuery` 回复。
+
+### widget 和 Telegram 小程序（Mini App）有什么区别？
+
+小程序是你自己托管的网页，按需在 WebView 里打开，可以随意联网。
+widget 是消息本身的一部分：随聊天滚动始终可见，压缩后不超过 4 KB，并且完全离线。
+一眼能看完的卡片用 widget，更复杂的内容用 `openTelegramLink` 跳转到小程序。
+
+### 哪些 agent 能用这个 skill？
+
+它按 Hermes Agent 和 OpenClaw 的规范打包并实测过，两者都读取 `SKILL.md`。
+检查器和发送命令本身是普通的 Python 命令行工具，所以任何能执行 shell 命令的 agent，
+或者你自己写的 bot，也都能用。
+
+### 让大模型写 HTML 发到用户聊天里安全吗？
+
+Telegram 的沙箱让 widget 无法联网、也出不了自己的消息，剩下的主要风险在内容上：agent 被诱导塞进钓鱼链接。
+本 skill 只允许链接到运营者白名单里的域名，拒绝任何能在运行时拼出 URL 的代码，检查不通过就不发送。
+详见[安全模型](#安全模型)。
+
 ## 路线图
 
 - [ ] 可交互的 widget：通过 Hermes 插件和 OpenClaw 钩子回复 `widget_query`
@@ -280,13 +333,20 @@ Telegram 报错时只返回 Telegram 的 `description`。
 
 欢迎提 issue 和 pull request，尤其是新模板，以及有 Telegram 规范依据的检查规则。
 新规则要在 [`tests/test_check.py`](tests/test_check.py) 里附上一个会被它拒绝的样例；
-新模板必须通过 `check`，并且在 320 px 宽时渲染高度不超过 560 px。
+新模板必须通过 `check`，并且在 320 px 宽时渲染高度不超过 560 px。细则见 [CONTRIBUTING.md](CONTRIBUTING.md)（英文）。
+如果发现了能把链接绕过检查器的办法，请[私下报告](SECURITY.md)。
 
 ```bash
 python -m venv .venv && .venv/bin/pip install -e ".[dev,render]"
 .venv/bin/python -m playwright install chromium
 .venv/bin/pytest
 ```
+
+## 相关资源
+
+- [Telegram 的 widget 指南](https://core.telegram.org/bots/widgets)：官方规范
+- [Widget Sandbox](https://github.com/TelegramMessenger/widget-sandbox)：Telegram 的 widget 运行环境和 profile 文档
+- [Awesome Telegram Widgets](https://github.com/ADanMan/awesome-telegram-widgets)：社区整理的 widget 和开发工具合集
 
 ## 致谢
 

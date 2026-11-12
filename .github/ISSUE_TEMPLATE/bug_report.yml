@@ -1,0 +1,33 @@
+name: Bug report
+description: The validator, sender or a template does not behave as documented
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Found a way to get a link or dynamic code past the validator, or to leak the bot token? Please
+        report it privately instead (Security tab → Report a vulnerability).
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: The command you ran, what you expected and what you got. Remove your bot token from any output.
+    validations:
+      required: true
+  - type: textarea
+    id: widget
+    attributes:
+      label: Smallest widget that shows it
+      render: html
+  - type: input
+    id: setup
+    attributes:
+      label: Setup
+      description: Hermes Agent / OpenClaw / plain CLI, with versions, Python version and OS
+    validations:
+      required: true
+  - type: input
+    id: app
+    attributes:
+      label: Telegram app (if it is about how a widget looks)
+      placeholder: e.g. Telegram for iOS 12.3

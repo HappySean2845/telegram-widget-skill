@@ -2,7 +2,7 @@
 
 # Telegram Widget Skill
 
-**Rich, live cards for AI agents on Telegram. Written by the model, verified before they ship.**
+**Telegram HTML widgets for AI agents. The model writes the card; a strict validator checks it before it ships.**
 
 [![CI](https://github.com/HappySean2845/telegram-widget-skill/actions/workflows/ci.yml/badge.svg)](https://github.com/HappySean2845/telegram-widget-skill/actions/workflows/ci.yml)
 [![Telegram Bot API 10.4](https://img.shields.io/badge/Telegram%20Bot%20API-10.4-26A5E4?logo=telegram&logoColor=white)](https://core.telegram.org/bots/api-changelog)
@@ -19,18 +19,23 @@
 
 <br>
 
-Telegram [Bot API 10.4](https://core.telegram.org/bots/api-changelog) lets a bot answer with an
-**HTML widget**: a self-contained card that runs inside the message bubble, on every Telegram app.
-For an AI agent it is the difference between a paragraph of numbers and a chart the user takes in
-at a glance.
+**Telegram Widget Skill** is an open-source agent skill and CLI that lets AI agents write, validate
+and send **Telegram HTML widgets**: the interactive cards bots can post inside chat messages since
+[Bot API 10.4](https://core.telegram.org/bots/api-changelog) (`sendWidget`, November 2026). It
+works with Hermes Agent and OpenClaw, and as a plain Python CLI with any bot.
 
-Widgets are also unforgiving. The app silently strips everything outside a narrow profile, the
-server refuses anything over 4 KB compressed, the HTML can never be changed once sent, and a single
-injected link turns a helpful card into a phishing lure.
+For an agent, a widget is the difference between a paragraph of numbers and a chart the user takes
+in at a glance. Widgets are also unforgiving: the Telegram app silently strips everything outside a
+narrow profile, the server refuses anything over 4 KB compressed, the HTML can never be changed once
+sent, and a single injected link turns a helpful card into a phishing lure.
 
-**Telegram Widget Skill** turns this into a reliable workflow for agents: a field guide condensed
-from Telegram's specification, ready-made templates, a strict validator that explains every
-problem in terms a model can act on, and a sender that will not ship anything the validator rejects.
+Instead of a fixed set of cards, this skill lets the agent compose the card the conversation needs,
+then holds it to Telegram's rules before it is sent: a field guide condensed from the
+specification, ready-made templates, a validator that explains every problem in terms a model can
+act on, and a sender that will not ship anything the validator rejects.
+
+<sub>Not to be confused with Telegram's website widgets (Login, Post and Discussion widgets). This
+project is about the widgets bots send in chats.</sub>
 
 ## Highlights
 
@@ -295,6 +300,60 @@ The full test record is in [docs/verification.md](docs/verification.md).
 - **Older apps** show "unsupported message" with the caption instead of the widget, which is why
   every widget is sent with a caption.
 
+## FAQ
+
+### What are Telegram widgets?
+
+Telegram widgets, introduced in Bot API 10.4 in November 2026, are small HTML documents a bot sends
+with `sendWidget`. Telegram draws them inside the message bubble on iOS, Android, macOS, Telegram
+Desktop and the web. Their JavaScript runs in a QuickJS sandbox with no network access, and the bot
+changes what they show by updating their state.
+
+### How big can a Telegram widget be?
+
+At most 32,768 bytes of UTF-8 HTML, and at most 4,096 bytes after the server compresses it with
+zlib at level 9. The chat state (`chat_data`) and the shared state (`public_data`) hold up to 1,024
+bytes each. On screen a widget is 200 to 600 px wide and 50 to 600 px tall, and content beyond that
+height is clipped.
+
+### Can a widget be changed after it is sent?
+
+Its HTML cannot. Its state can: `editMessageWidgetData` replaces `chat_data` or `public_data` and
+the widget redraws, so a price card or a checklist updates in place. This skill's `edit` command
+does exactly that, and can update the caption as well.
+
+### Can bots send widgets to groups or channels?
+
+Not in production yet. Widgets currently work only in the private chat between a user and the bot.
+Groups, inline mode and forwards are available on Telegram's test server, and channels cannot
+receive widgets directly at all.
+
+### Can a widget load live data from the internet?
+
+No. Every network API throws inside a widget, and external scripts, fonts and images are never
+loaded. Data reaches a widget through its state, written by the bot, or through a request
+(`TelegramWidget.request()`) that the bot answers with `answerWidgetQuery` within 15 seconds.
+
+### How are widgets different from Telegram Mini Apps?
+
+A Mini App is a web page you host, opened on demand in a WebView with full network access. A widget
+is part of the message itself: always visible as the chat scrolls, at most 4 KB compressed, and
+offline. Use a widget for a card the user takes in at a glance, and link to a Mini App with
+`openTelegramLink` for anything larger.
+
+### Which agents can use this skill?
+
+It is packaged and tested for Hermes Agent and OpenClaw, which both read `SKILL.md`. The validator
+and the sender are a plain Python CLI, so any agent that can run shell commands, or a bot you write
+yourself, can use them too.
+
+### Is it safe to let a language model write HTML for users' chats?
+
+Telegram's sandbox keeps a widget offline and confined to its message, so the main remaining risk is
+the content: an agent tricked into adding a phishing link. This skill only allows links to hosts the
+operator allowlists, refuses any code that could assemble a URL at runtime, and will not send a
+widget that fails these checks. See [Security model](#security-model).
+
 ## Roadmap
 
 - [ ] Interactive widgets: answer `widget_query` through a Hermes plugin and an OpenClaw hook
@@ -307,13 +366,20 @@ The full test record is in [docs/verification.md](docs/verification.md).
 Issues and pull requests are welcome, especially new templates and validator rules grounded in
 Telegram's specification. A new rule comes with a sample that it rejects in
 [`tests/test_check.py`](tests/test_check.py); a new template must pass `check` and render below
-560 px at 320 px wide.
+560 px at 320 px wide. The details are in [CONTRIBUTING.md](CONTRIBUTING.md). Found a way to get a
+link past the validator? Please [report it privately](SECURITY.md).
 
 ```bash
 python -m venv .venv && .venv/bin/pip install -e ".[dev,render]"
 .venv/bin/python -m playwright install chromium
 .venv/bin/pytest
 ```
+
+## See also
+
+- [Telegram's widget guide](https://core.telegram.org/bots/widgets): the specification
+- [Widget Sandbox](https://github.com/TelegramMessenger/widget-sandbox): Telegram's widget runtime and profile documentation
+- [Awesome Telegram Widgets](https://github.com/ADanMan/awesome-telegram-widgets): a community collection of widgets and builder tools
 
 ## Acknowledgements
 

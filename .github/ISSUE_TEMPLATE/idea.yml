@@ -1,0 +1,22 @@
+name: Template or rule idea
+description: Suggest a new widget template, a validator rule, or support for another agent framework
+labels: [enhancement]
+body:
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind
+      options:
+        - New template
+        - Validator rule
+        - Agent framework support
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: The idea
+      description: What should the agent be able to show, or what should the validator catch? For a rule, link the part of Telegram's widget guide it is based on.
+    validations:
+      required: true

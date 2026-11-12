@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Report a security issue privately
+    url: https://github.com/HappySean2845/telegram-widget-skill/security/advisories/new
+    about: A validator bypass or a token leak. Please do not open a public issue for these.
+  - name: Telegram's widget guide
+    url: https://core.telegram.org/bots/widgets
+    about: Questions about what widgets can do in general.
