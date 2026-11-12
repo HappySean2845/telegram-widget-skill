@@ -6,3 +6,8 @@ docs/
 .env
 .env.example
 pyproject.toml
+# GitHub-only documents: the skill itself is SKILL.md, references/, examples/ and scripts/
+README.md
+README.zh-CN.md
+CONTRIBUTING.md
+SECURITY.md

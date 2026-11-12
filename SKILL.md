@@ -1,6 +1,8 @@
 ---
-name: telegram-widgets
-description: Telegram HTML widgets - live cards in a private chat (prices, polls, checklists, charts, countdowns). Use when you reply on Telegram and the answer is better seen than read. Writes the widget, validates it with a strict checker, sends it with sendWidget and updates it later.
+name: telegram-widget-skill
+description: Reply on Telegram with an HTML widget card (price, poll, checklist, chart, countdown) when an answer is better seen than read; checks it, then sends or updates it.
+version: 1.0.1
+author: HappySean2845
 license: MIT
 compatibility: Telegram Bot API 10.4+, python3. Hermes Agent and OpenClaw.
 allowed-tools: "Bash(python3:*)"

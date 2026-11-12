@@ -208,7 +208,7 @@ hermes config set TG_WIDGETS_ALLOWED_LINKS "example.com t.me/YourBot"   # option
   automatically and refuses any other chat.
 - Community skills are scanned on install; this one is rated `safe`. The installer fetches files
   through the GitHub API; if it hits the rate limit, set `GITHUB_TOKEN` or log in with `gh`.
-- The skill is listed as `telegram-widgets`.
+- The skill is listed as `telegram-widget-skill`.
 
 </details>
 
@@ -222,14 +222,14 @@ openclaw skills install git:HappySean2845/telegram-widget-skill@main
 Give the skill the bot token in `openclaw.json`:
 
 ```json
-{ "skills": { "entries": { "telegram-widgets": { "apiKey": "<bot token>" } } } }
+{ "skills": { "entries": { "telegram-widget-skill": { "apiKey": "<bot token>" } } } }
 ```
 
 `apiKey` also accepts a SecretRef such as
 `{"source": "env", "provider": "default", "id": "TELEGRAM_BOT_TOKEN"}`. If the gateway already has
 `TELEGRAM_BOT_TOKEN` in its environment, no configuration is needed: `exec` on the gateway host
 inherits it. A token that only lives in `channels.telegram.botToken` is not visible to commands.
-The optional link allowlist goes in `skills.entries.telegram-widgets.env.TG_WIDGETS_ALLOWED_LINKS`.
+The optional link allowlist goes in `skills.entries.telegram-widget-skill.env.TG_WIDGETS_ALLOWED_LINKS`.
 
 - The model passes the chat from the turn's conversation info as is (`--chat-id telegram:123456789`).
 - With `exec` in a Docker sandbox, the token and `python3` must be available inside the sandbox.

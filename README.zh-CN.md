@@ -187,7 +187,7 @@ hermes config set TG_WIDGETS_ALLOWED_LINKS "example.com t.me/YourBot"   # 可选
 - 当前聊天来自会话（`HERMES_SESSION_CHAT_ID`），`send` 自动发往这里，并拒绝发往其他聊天。
 - Hermes 安装社区 skill 时会做安全扫描，本 skill 的评级是 `safe`。安装器通过 GitHub API 下载文件，
   如果碰到限流，设置 `GITHUB_TOKEN` 或用 `gh` 登录即可。
-- skill 在列表里显示为 `telegram-widgets`。
+- skill 在列表里显示为 `telegram-widget-skill`。
 
 </details>
 
@@ -201,13 +201,13 @@ openclaw skills install git:HappySean2845/telegram-widget-skill@main
 在 `openclaw.json` 里把 bot token 交给 skill：
 
 ```json
-{ "skills": { "entries": { "telegram-widgets": { "apiKey": "<bot token>" } } } }
+{ "skills": { "entries": { "telegram-widget-skill": { "apiKey": "<bot token>" } } } }
 ```
 
 `apiKey` 也可以写成 SecretRef，例如 `{"source": "env", "provider": "default", "id": "TELEGRAM_BOT_TOKEN"}`。
 如果 gateway 的环境变量里已经有 `TELEGRAM_BOT_TOKEN`，就什么都不用配：gateway 主机上的 `exec` 会继承它。
 只写在 `channels.telegram.botToken` 里的 token 对命令不可见。可选的链接白名单写在
-`skills.entries.telegram-widgets.env.TG_WIDGETS_ALLOWED_LINKS`。
+`skills.entries.telegram-widget-skill.env.TG_WIDGETS_ALLOWED_LINKS`。
 
 - 模型把本轮对话信息里的 chat 原样传入（`--chat-id telegram:123456789`）。
 - 如果 `exec` 跑在 Docker 沙箱里，token 和 `python3` 都要在沙箱内可用。
