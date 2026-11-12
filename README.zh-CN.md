@@ -1,168 +1,293 @@
-# telegram-widget-skill
+<div align="center">
 
-[English](README.md) | **简体中文**
+# Telegram Widget Skill
 
-让你的 Telegram AI agent 在聊天里画 **HTML widget**：行情卡、投票结果、待办清单、小图表、倒计时。
-agent 写好 widget，先过一遍严格的检查器，通过了才用 Telegram 的 `sendWidget` 发出去。
+**让 AI agent 在 Telegram 里回复实时卡片：模型来写，发出之前先验证。**
 
-可以作为 **[Hermes Agent](https://github.com/NousResearch/hermes-agent)** 和
-**[OpenClaw](https://github.com/openclaw/openclaw)** 的 skill 使用（两者读的是同一份 `SKILL.md`），
-其他 bot 也能直接当命令行工具用。
+[![CI](https://github.com/HappySean2845/telegram-widget-skill/actions/workflows/ci.yml/badge.svg)](https://github.com/HappySean2845/telegram-widget-skill/actions/workflows/ci.yml)
+[![Telegram Bot API 10.4](https://img.shields.io/badge/Telegram%20Bot%20API-10.4-26A5E4?logo=telegram&logoColor=white)](https://core.telegram.org/bots/api-changelog)
+[![Hermes Agent](https://img.shields.io/badge/Hermes%20Agent-skill-6E56CF)](https://github.com/NousResearch/hermes-agent)
+[![OpenClaw](https://img.shields.io/badge/OpenClaw-skill-E8590C)](https://github.com/openclaw/openclaw)
+[![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-3776AB?logo=python&logoColor=white)](pyproject.toml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-2EA44F)](LICENSE)
 
-<p align="center"><img src="docs/examples.png" width="680" alt="五个示例 widget，浅色和深色"></p>
+[English](README.md) · **简体中文**
 
-## 为什么要做这个
+<img src="docs/hero.png" alt="agent 在 Telegram 里用 NVDA 实时价格卡片回答问题，旁边是投票、图表、清单、倒计时卡片和检查器输出" width="100%">
 
-2026 年 11 月 9 日，Telegram 发布了 [Bot API 10.4](https://core.telegram.org/bots/api-changelog)：
-bot 可以发 widget 了。widget 是一份自包含的 HTML，在所有 Telegram 客户端的消息气泡里运行。
-模型写 HTML 很在行，但 widget 有几个容易踩的坑：
+</div>
 
-- 客户端会**悄悄删掉**「widget profile」以外的一切（不支持 `vh`、输入框、`position: sticky`、
-  网络请求、外链图片……），所以在浏览器里看着没问题的 widget，到了 Telegram 里可能是坏的；
-- 服务器拒收 **zlib 压缩后超过 4096 字节**的 widget，而且 HTML **发出去以后就不能再改**；
-- 模型读过一个网页或一条推文，就可能被诱导把**钓鱼链接**塞进一张好看的卡片，用户一点就中招。
+<br>
 
-这个 skill 给 agent 提供规则、一个返回机器可读错误（agent 能照着改）的检查器，
-以及一个检查不通过就拒绝发送的发送命令。
+Telegram [Bot API 10.4](https://core.telegram.org/bots/api-changelog) 让 bot 可以用 **HTML widget**
+回复消息：一张自包含的卡片，直接在消息气泡里运行，所有 Telegram 客户端都支持。
+对 AI agent 来说，这意味着不用再回一段堆满数字的文字，而是给用户一张一眼就能看懂的图表。
 
-## skill 里有什么
+但 widget 的规矩很严。客户端会悄悄删掉规范以外的一切；压缩后超过 4 KB 服务器直接拒收；
+HTML 发出去就再也改不了；而只要被塞进一个恶意链接，一张好用的卡片就成了钓鱼陷阱。
 
-仓库根目录就是 skill 目录（OpenClaw 从 git 安装时要求 `SKILL.md` 在根目录）。
+**Telegram Widget Skill** 把这些变成 agent 能稳定执行的流程：一份从 Telegram 规范提炼的写作指南、
+现成的模板、一个用模型能看懂的方式指出每个问题的严格检查器，以及一个检查不过就拒绝发送的发送命令。
 
+## 亮点
+
+<table>
+<tr>
+<td width="50%" valign="top">
+
+**🤖 为 agent 而生**<br>
+同一份 `SKILL.md` 同时支持 Hermes Agent 和 OpenClaw。每个错误都以 JSON 返回，带规则名、行号和修复提示，
+agent 在用户看到之前就能自己改好。
+
+</td>
+<td width="50%" valign="top">
+
+**🛡️ 链接安全从设计上保证**<br>
+链接只能是字面量 URL，且域名必须在运营者的白名单里。任何可能在运行时拼出目标地址的写法都会被拒绝：
+检查器证明不了链接去哪，widget 就发不出去。
+
+</td>
+</tr>
+<tr>
+<td valign="top">
+
+**📐 以规范为准**<br>
+HTML、SVG、CSS 和 JavaScript 都按 Telegram 的 widget 规范检查，JavaScript 由真正的引擎（QuickJS 或 Node）解析。
+通过检查的 widget 只用客户端支持的特性，而不是碰巧在浏览器里能跑的写法。
+
+</td>
+<td valign="top">
+
+**🎯 大小预算精确到字节**<br>
+大小按 Telegram 的算法计算，和生产服务器分毫不差：压缩后 4,096 字节被接受，4,097 字节被拒。
+
+</td>
+</tr>
+<tr>
+<td valign="top">
+
+**🔄 实时更新**<br>
+模板从 `chat_data` 绘制，价格、票数、清单进度都通过 `editMessageWidgetData` 原地更新，不会刷屏发新消息。
+
+</td>
+<td valign="top">
+
+**🔑 密钥不外泄**<br>
+bot token 只从环境变量读取，不会出现在任何输出、报错或日志里，网络出错时也一样。
+
+</td>
+</tr>
+</table>
+
+## 工作流程
+
+```mermaid
+flowchart LR
+    Q([用户在 Telegram 提问]) --> W[agent 用模板和数据<br/>写出 widget]
+    W --> C{widget.py check}
+    C -- "错误 + 修复提示" --> W
+    C -- 通过 --> S[widget.py send]
+    S --> T[(Telegram<br/>sendWidget)]
+    T -. "之后有新数据" .-> E[widget.py edit]
+    E --> T
 ```
-SKILL.md                    agent 什么时候用 widget、怎么用
-references/widget-rules.md  给模型看的精简版 widget 规则
-examples/*.html, *.json     五个从 chat_data 画出来的 widget，带示例状态
-scripts/widget.py           命令行工具（Python 3.9+，只用标准库）
-scripts/tgwidget/           它的代码
-```
+
+## 快速开始
+
+**1. 安装 skill**
 
 ```bash
-python3 scripts/widget.py check  card.html --chat-data @state.json   # 检查，输出 JSON
-python3 scripts/widget.py render card.html --out card.png             # 可选：用无头 Chromium 渲染
-python3 scripts/widget.py send   card.html --chat-id 123 --caption "BTC $67,250" --chat-data @state.json
-python3 scripts/widget.py edit   --chat-id 123 --message-id 456 --chat-data @new-state.json
+# Hermes Agent
+hermes skills install HappySean2845/telegram-widget-skill/
+
+# OpenClaw
+openclaw skills install git:HappySean2845/telegram-widget-skill@main
 ```
 
-bot token 优先读 `TG_WIDGETS_BOT_TOKEN`，没有再读 `TELEGRAM_BOT_TOKEN`。任何输出里都不会出现 token：
-出错时只返回 Telegram 的 `description`，从不返回 HTTP 库的报错信息
-（那里面带着请求 URL，而 URL 里就有 token）。
+**2. 接上你的 bot。** 把 agent 正在用的那个 bot 的 token 交给 skill（各框架的细节见[安装](#安装)）：
+
+```bash
+hermes config set TG_WIDGETS_BOT_TOKEN <bot token>   # Hermes Agent
+```
+
+**3. 直接开口。** 在 Telegram 里给你的 agent 发消息：
+
+> NVDA 这个月表现怎么样？做成卡片给我看。
+
+agent 会选用价格模板、填入数据、检查 widget，然后发到你的私聊里。之后再问，它会原地更新同一张卡片。
+
+## 模板
+
+skill 自带五个模板。每个都是一个独立的 HTML 文件，从 `chat_data` 绘制，压缩后只有 1 到 1.3 KB，
+并跟随用户的 Telegram 主题切换浅色和深色。
+
+| 模板 | 用途 |
+|---|---|
+| [`price-snapshot`](examples/price-snapshot.html) | 股票、代币或汇率：价格、涨跌幅和走势线 |
+| [`poll-results`](examples/poll-results.html) | 投票结果，带占比和总票数 |
+| [`checklist`](examples/checklist.html) | 一组任务的完成进度 |
+| [`bar-chart`](examples/bar-chart.html) | 带标签的小柱状图，可高亮一根 |
+| [`countdown`](examples/countdown.html) | 实时跳动的事件倒计时 |
+
+<p align="center"><img src="docs/themes.png" alt="价格卡片在 Telegram 浅色和深色主题下的样子" width="560"></p>
 
 ## 检查器
 
-`check` 输出一个 JSON 对象：`ok`、`errors`、`warnings`（每条都有 `rule`、`message`、
-`line`，以及告诉模型怎么改的 `hint`）和 `stats`（大小、剩余额度）。
-`send` 会跑同样的检查（外加状态数据和 caption），不通过就什么都不发。
+```bash
+python3 scripts/widget.py check card.html --chat-data @state.json
+```
+
+`check` 输出一个 JSON 对象：`ok`、`errors` 和 `warnings`（每条都有 `rule`、`message`、`line` 和 `hint`），
+以及记录大小预算的 `stats`。`send` 会跑同样的检查，外加状态数据和 caption，全部通过才发送。
 
 | 方面 | 检查内容 |
 |---|---|
-| 大小 | UTF-8 不超过 32768 字节，`zlib.compress(html, 9)` 后不超过 4096 字节（算法和服务器一致），不含 NUL，必须是合法 UTF-8；`chat_data`/`public_data` 各不超过 1024 字节 |
-| HTML / SVG | 不能有表单控件、音视频、iframe、`<script src>`、远程图片、`data:` 形式的 SVG 图片、表现类或焦点类属性、`clipPath`/`mask`/SMIL/`foreignObject` 等 |
-| CSS | 不能用 `vh` 系列单位、`overflow: auto/scroll`、`position: sticky`、逻辑属性、多列布局、`oklch()`/`color-mix()`、`text-shadow`、行数截断、3D 变换、blur/brightness/drop-shadow 以外的 filter、`clip-path`、mask、混合模式、具名字体、`@font-face`/`@import`/`@container`/`@layer`、嵌套、`:has()`/`:focus`、`@media (hover/pointer/print)`、远程 `url()` |
-| JavaScript | 语法检查（优先 QuickJS，其次 Node，都没有就做结构检查）；不能用网络 API、页面跳转、弹窗、剪贴板、canvas 回读、WebGL、触摸/键盘/滚动事件 |
-| **链接** | 见下文 |
-| 上限 | 2000 个节点、400 条 CSS 规则、32 个 `@keyframes`、每个属性 8K 字符（`data:` 图片 URL 也算在内） |
+| 大小 | UTF-8 不超过 32,768 字节，`zlib.compress(html, 9)` 后不超过 4,096 字节，算法和服务器一致；必须是合法 UTF-8，不含 NUL；`chat_data` 和 `public_data` 各不超过 1,024 字节 |
+| HTML 和 SVG | 不能有表单控件、音视频、iframe、外部脚本或图片、`data:` 形式的 SVG 图片、表现类或焦点类属性、`clipPath`、`mask`、SMIL 或 `foreignObject` |
+| CSS | 不能用 `vh` 系列单位、滚动溢出、sticky 定位、逻辑属性、多列布局、`oklch()` 或 `color-mix()`、文字阴影、行数截断、3D 变换、不支持的 filter、`clip-path`、mask、混合模式、具名字体、`@font-face`、`@import`、`@container`、`@layer`、嵌套、`:has()`、`:focus`、hover 或 print 媒体查询、远程 `url()` |
+| JavaScript | 语法正确（QuickJS，其次 Node，都没有就做结构检查）；不能用网络 API、页面跳转、弹窗、剪贴板、canvas 回读、WebGL，以及触摸、键盘和滚动事件 |
+| 链接 | 见下文的严格策略 |
+| 上限 | 2,000 个节点、400 条 CSS 规则、32 个 `@keyframes`、每个属性 8,192 个字符 |
 
-### 链接：证明不了链接去哪，就拒绝整个 widget
+`render` 更进一步：在无头 Chromium 里用模拟的 Telegram 运行环境跑一遍 widget，报告运行时错误、
+实际高度，并输出一张截图，带视觉能力的 agent 可以直接看图检查。
 
-- 打开链接只能用**一个字面量 URL**，并且只有四种写法：
-  `TelegramWidget.openLink('https://…')`、`TelegramWidget.openTelegramLink('https://t.me/…')`、
-  `window.open('https://…')` 或 `<a href="https://…">`。
-- 域名必须在**运营者的白名单** `TG_WIDGETS_ALLOWED_LINKS` 里
-  （`example.com`、`*.example.com`、`t.me/YourBot`）。**默认为空，也就是不允许任何链接。**
-  没有对应的命令行参数，因为命令行是模型写的。
-- 任何位置出现的像 URL 的文本（字符串、属性、正文、CSS、状态数据、caption），
-  先解码转义（`'https://…'` 就是 `https://…`），再过同一份白名单。
-- 一切能把名字或 URL 拼出来的写法都拒绝：`eval`、`Function`、`.constructor`、`atob`、
-  `String.fromCharCode`、`import()`、字符串参数的定时器、标识符里的 unicode 转义、
-  `'a' + 'b'` 这样的字面量拼接、用字符串键或在 `window`/`document`/`TelegramWidget` 上做计算属性访问、
-  把 `TelegramWidget` 传来传去、`innerHTML` 及其他一切从字符串生成 HTML 的 API、在代码里设置 `href`/`src`/`on*`。
+## 安全模型
 
-**威胁模型。** 这是给「按 skill 办事的 agent」装的护栏：让它读到的内容没法引导它发出钓鱼卡片。
-它不是针对 agent 本身的沙箱：一个有不受限 shell 和 bot token 的 agent 完全可以直接调 Bot API。
-如果需要这层保证，就别把 token 放进 agent 的 shell，只把 `send` 暴露为通往 Telegram 的唯一途径。
+agent 每天都在读陌生人写的网页、帖子和消息，其中任何一条都可能试图诱导它把恶意链接放进一张看起来很可信的卡片。
+链接策略的设计目标，就是让这种诱导无从得手：
+
+- 链接只能是**一个字面量 URL**，并且只有四种写法：`TelegramWidget.openLink('https://…')`、
+  `TelegramWidget.openTelegramLink('https://t.me/…')`、`window.open('https://…')` 或 `<a href="https://…">`。
+- 域名必须在**运营者的白名单** `TG_WIDGETS_ALLOWED_LINKS` 里（例如 `example.com *.example.com t.me/YourBot`）。
+  白名单**默认为空**，而且只从环境变量读取，永远不出现在模型写的命令行里。
+- widget、状态数据和 caption 里任何像 URL 的字符串，都会先解码转义，再过同一份白名单。
+- 所有能在运行时拼出名字或 URL 的写法一律拒绝：`eval`、`Function`、`.constructor`、`atob`、
+  `String.fromCharCode`、`import()`、字符串定时器、标识符里的 unicode 转义、字面量字符串拼接、
+  在 `window`、`document` 或 `TelegramWidget` 上做计算属性访问、给 `TelegramWidget` 起别名、
+  `innerHTML` 及其他一切从字符串生成 HTML 的 API，以及在代码里设置 `href`、`src` 或事件处理器。
+
+**适用范围。** 这是给「按 skill 办事的 agent」装的护栏，不是针对 agent 本身的沙箱：
+一个有不受限 shell 和 bot token 的 agent 完全可以直接调用 Bot API。如果需要这层保证，
+就别把 token 放进 agent 的 shell，只把 `send` 作为通往 Telegram 的唯一途径。
 
 ## 安装
 
-两个框架读的是同一份 `SKILL.md`。agent 执行 shell 命令的那台机器上需要有 `python3`（3.9+），
-还需要 agent 正在用的那个 bot 的 token。装上 `quickjs`（`pip install quickjs`）后 JavaScript
-语法检查是精确的；没装就退回 `node --check`，再没有就做结构检查。
+agent 执行 shell 命令的环境里需要 `python3`（3.9 或更高），以及 agent 正在使用的那个 bot 的 token。
+装了 `quickjs`（`pip install quickjs`）后 JavaScript 语法检查是精确的；没装就退回 `node --check`，
+再没有就做结构检查。
 
-### Hermes Agent
+<details>
+<summary><b>Hermes Agent</b></summary>
 
 ```bash
 hermes skills install HappySean2845/telegram-widget-skill/
 hermes config set TG_WIDGETS_BOT_TOKEN <和 TELEGRAM_BOT_TOKEN 相同的 token>
-hermes config set TG_WIDGETS_ALLOWED_LINKS "example.com t.me/YourBot"   # 可选：widget 允许链接的域名
+hermes config set TG_WIDGETS_ALLOWED_LINKS "example.com t.me/YourBot"   # 可选
 ```
 
-- Hermes 会故意把 `TELEGRAM_BOT_TOKEN` 从每个工具子进程的环境变量里删掉，skill 也没法要回来。
-  所以这个 skill 声明了自己的变量 `TG_WIDGETS_BOT_TOKEN`，skill 加载后 Hermes 会把它传给终端。
-- 发给哪个聊天由会话决定：Hermes 把当前 chat id 放进终端环境变量（`HERMES_SESSION_CHAT_ID`），
-  `send` 直接用它。`--chat-id` 指向别的聊天会被拒绝。
-- Hermes 安装社区 skill 时会做安全扫描，这个 skill 的结论是 `safe`。安装时会通过 GitHub API
-  逐个文件下载仓库，大约要一分钟；如果卡在 API 限流上，设置 `GITHUB_TOKEN` 或用 `gh` 登录。
-- skill 显示名为 `telegram-widgets`（目录名跟随仓库名）。
+- Hermes 会刻意把 `TELEGRAM_BOT_TOKEN` 从每个工具子进程里删掉，所以 skill 声明了自己的变量
+  `TG_WIDGETS_BOT_TOKEN`，skill 加载后 Hermes 会把它传进来。
+- 当前聊天来自会话（`HERMES_SESSION_CHAT_ID`），`send` 自动发往这里，并拒绝发往其他聊天。
+- Hermes 安装社区 skill 时会做安全扫描，本 skill 的评级是 `safe`。安装器通过 GitHub API 下载文件，
+  如果碰到限流，设置 `GITHUB_TOKEN` 或用 `gh` 登录即可。
+- skill 在列表里显示为 `telegram-widgets`。
 
-### OpenClaw
+</details>
+
+<details>
+<summary><b>OpenClaw</b></summary>
 
 ```bash
 openclaw skills install git:HappySean2845/telegram-widget-skill@main
 ```
 
-然后把 bot token 交给 skill，可以写成 `openclaw.json` 里这个 skill 的 key：
+在 `openclaw.json` 里把 bot token 交给 skill：
 
 ```json
 { "skills": { "entries": { "telegram-widgets": { "apiKey": "<bot token>" } } } }
 ```
 
-（`apiKey` 也可以写成 SecretRef，比如 `{"source": "env", "provider": "default", "id": "TELEGRAM_BOT_TOKEN"}`），
-如果 gateway 的环境变量里已经有 `TELEGRAM_BOT_TOKEN`，那什么都不用配：gateway 主机上的 `exec` 会继承它。
-如果 token 只写在 `channels.telegram.botToken` 里，命令是看不到的，这时要设置 `apiKey`。
-链接白名单（可选）：`skills.entries.telegram-widgets.env.TG_WIDGETS_ALLOWED_LINKS`。
+`apiKey` 也可以写成 SecretRef，例如 `{"source": "env", "provider": "default", "id": "TELEGRAM_BOT_TOKEN"}`。
+如果 gateway 的环境变量里已经有 `TELEGRAM_BOT_TOKEN`，就什么都不用配：gateway 主机上的 `exec` 会继承它。
+只写在 `channels.telegram.botToken` 里的 token 对命令不可见。可选的链接白名单写在
+`skills.entries.telegram-widgets.env.TG_WIDGETS_ALLOWED_LINKS`。
 
-- 模型把本轮对话信息里的 chat 原样传进来（`--chat-id telegram:123456789`），`send` 能识别这种格式。
-- 如果 `exec` 跑在 Docker 沙箱里，宿主机上的 token 和 `python3` 在里面都没有。
-- OpenClaw 的 `main` 分支（截至 2026-11-11 还没发版）自带一个 `show_widget` 工具，
-  需要打开 `channels.telegram.widgets: true`，它还会把点击回传给 agent。
-  在那个版本里，skill 会让模型先用本 skill `check`，再用 `show_widget` 发送。
+- 模型把本轮对话信息里的 chat 原样传入（`--chat-id telegram:123456789`）。
+- 如果 `exec` 跑在 Docker 沙箱里，token 和 `python3` 都要在沙箱内可用。
+- OpenClaw 的开发分支新增了原生的 `show_widget` 工具。在有这个工具的版本里，skill 用 `check` 检查，
+  用 `show_widget` 发送。
 
-### 其他 bot
+</details>
 
-命令行工具就是普通 Python：`pip install "git+https://github.com/HappySean2845/telegram-widget-skill"`
-之后就有 `tgwidget check|render|send|edit`，或者在仓库里直接跑 `scripts/widget.py`。
+<details>
+<summary><b>其他任意 bot</b></summary>
 
-## 限制和后续计划
+命令行工具是纯 Python，任何 Telegram bot 都能用：
 
-- **正式环境的 widget 只能发在和 bot 的私聊里。** 群聊、inline 模式和转发目前只在测试服务器可用；
-  `send` 会拒绝非私聊的 chat id，除非加 `--test-env`。
-- **还不支持交互请求。** widget 可以调用 `TelegramWidget.request()`，它会以 `widget_query`
-  更新的形式到达 bot，并且必须在 15 秒内回复。目前没有哪个 skill 能回复它：Hermes 根本收不到这个更新
-  （它订阅的是 python-telegram-bot 的更新类型列表，那份列表比 widget 早）；OpenClaw 2026.11.3
-  及之前的版本没订阅它；OpenClaw 的 `main` 分支会自己用空数据回复所有 `widget_query`，
-  只把它自己 `show_widget` 发出的 widget 的点击转给 agent。所以 v1 的 widget 都是从 `chat_data`
-  画出来的快照，agent 用 `edit`（`editMessageWidgetData`）更新它们。`--allow-queries`
-  是留给自己会处理 `widget_query` 的 bot 用的。下一步：做一个订阅并回复 `widget_query` 的
-  Hermes 插件，OpenClaw 也做同样的钩子。
-- render 检查只是近似 Telegram 的默认样式；浏览器能画出 Telegram 会删掉的东西，
-  所以 `render` 是 `check` 的补充，不能代替它。
-- 哪些 Telegram 客户端版本支持 widget 官方没有公布；不支持的客户端会显示
-  「unsupported message」加上 caption，这就是 `send` 强制要求 caption 的原因。
+```bash
+pip install "git+https://github.com/HappySean2845/telegram-widget-skill"
+tgwidget check card.html
+```
 
-## 测试情况
+也可以在仓库里直接运行 `scripts/widget.py`。
 
-| | 状态 |
+</details>
+
+## 命令参考
+
+```bash
+python3 scripts/widget.py check  card.html [--chat-data JSON|@file] [--public-data …] [--text]
+python3 scripts/widget.py render card.html --out card.png [--scheme dark] [--width 320]
+python3 scripts/widget.py send   card.html --chat-id ID --caption TEXT [--chat-data …] [--dry-run]
+python3 scripts/widget.py edit   --chat-id ID --message-id N [--chat-data …] [--caption TEXT]
+```
+
+每个命令都输出一个 JSON 对象，退出码为 `0`（成功）、`1`（被拒或失败）或 `2`（用法错误）。
+Telegram 报错时只返回 Telegram 的 `description`。
+
+| 环境变量 | 作用 |
 |---|---|
-| 检查器和命令行 | 149 个测试：所有示例、一组合格 widget、每条规则各一个不合格 widget（链接、动态代码、profile、大小） |
-| `send` / `edit` | 对着本地的假 Bot API：请求内容、发送前拒绝、Telegram 报错、网络错误、输出里永远没有 token |
-| 渲染 | 示例在无头 Chromium 里渲染，浅色和深色，320 px 宽时高度都在 560 px 以内 |
-| OpenClaw 2026.11.3 | 从本仓库 `skills install git:…`，`skills info` 显示就绪，依赖 `python3`，主环境变量为 `TG_WIDGETS_BOT_TOKEN`；装好的命令行工具能用 macOS 自带的 Python 3.9 运行 |
-| Hermes Agent v0.23.1 | `skills install HappySean2845/telegram-widget-skill/` 通过安装扫描（`safe`）；skill 能正确加载目录和所需变量；`hermes config set` 之后 `TG_WIDGETS_BOT_TOKEN` 能进终端子进程，`TELEGRAM_BOT_TOKEN` 进不去 |
-| 真实 Bot API | 2026-11-11，在和测试 bot 的私聊里：Telegram 接受了 `send` 和 `edit`（`sendWidget`、`editMessageWidgetData`、`editMessageCaption`）；大小上限和检查器分毫不差：`zlib` level 9 压缩后 4096 字节被接受，4097 字节被拒（`INPUT_MEDIA_WIDGET_TOO_LARGE`） |
-| 真实 Telegram 客户端 | 2026-11-11：price-snapshot 示例（NVDA 实时数据）在聊天里显示正常 |
-| 在任一框架里跑完整一轮 agent 对话 | 还没有 |
+| `TG_WIDGETS_BOT_TOKEN` | bot token（优先使用） |
+| `TELEGRAM_BOT_TOKEN` | bot token，上一个变量没设置时使用 |
+| `TG_WIDGETS_ALLOWED_LINKS` | widget 允许链接的域名，用空格或逗号分隔；为空表示不允许任何链接 |
+| `TG_WIDGETS_CHAT_ID` | 单独使用命令行时的默认聊天 |
+| `TG_WIDGETS_API_BASE` | 自建的 Bot API 服务器，代替 `https://api.telegram.org` |
 
-## 开发
+## 兼容性
+
+| 组件 | 版本 | 状态 |
+|---|---|---|
+| Telegram Bot API | 10.4 | ✅ 已在生产服务器上验证：发送、更新、大小上限 |
+| Telegram 客户端 | | ✅ 已在真实聊天中验证 |
+| Hermes Agent | v0.23.1 | ✅ 可从 GitHub 安装，通过安装扫描，token 能传到 skill |
+| OpenClaw | 2026.11.3 | ✅ 可从 git 安装，有 `python3` 即就绪 |
+| Python | 3.9 到 3.13 | ✅ 每次推送都在 CI 中测试 |
+
+完整的测试记录见 [docs/verification.md](docs/verification.md)（英文）。
+
+## 已知限制
+
+- **只支持私聊。** 生产环境下，Telegram 只在用户和 bot 的私聊里展示 widget；群聊、inline 模式和转发目前仅限测试环境。
+  除非加 `--test-env`，`send` 会拒绝发往其他聊天。
+- **目前是快照，还不能交互。** widget 可以调用 `TelegramWidget.request()`，它会以 `widget_query` 的形式到达 bot，
+  并且必须在 15 秒内回复。目前两个框架都不会把这个更新转给 skill，所以模板从 `chat_data` 绘制，由 agent 用 `edit` 刷新。
+- **预览是近似的。** `render` 模拟的是 Telegram 的运行环境。浏览器能画出客户端会删掉的东西，
+  所以 `render` 只是 `check` 的补充，不能代替它。
+- **旧版客户端**会显示「unsupported message」加上 caption，而不是 widget，所以每个 widget 发送时都必须带 caption。
+
+## 路线图
+
+- [ ] 可交互的 widget：通过 Hermes 插件和 OpenClaw 钩子回复 `widget_query`
+- [ ] OpenClaw 原生 `show_widget` 正式发布后，提供一等支持
+- [ ] Telegram 在生产环境开放群聊 widget 后，第一时间支持
+- [ ] 更多模板：排行榜、表格、多序列图表
+
+## 参与贡献
+
+欢迎提 issue 和 pull request，尤其是新模板，以及有 Telegram 规范依据的检查规则。
+新规则要在 [`tests/test_check.py`](tests/test_check.py) 里附上一个会被它拒绝的样例；
+新模板必须通过 `check`，并且在 320 px 宽时渲染高度不超过 560 px。
 
 ```bash
 python -m venv .venv && .venv/bin/pip install -e ".[dev,render]"
@@ -172,8 +297,9 @@ python -m venv .venv && .venv/bin/pip install -e ".[dev,render]"
 
 ## 致谢
 
-widget 规则改编自 Telegram 的指南
-[Telegram Widgets](https://core.telegram.org/bots/widgets.md) 中「Writing widgets with an LLM」一节。
-本项目与 Telegram、Nous Research、OpenClaw 均无关联。
+widget 规则改编自 Telegram 的指南 [Telegram Widgets](https://core.telegram.org/bots/widgets.md)
+中「Writing widgets with an LLM」一节。本项目独立开发，与 Telegram、Nous Research、OpenClaw 均无关联。
 
-MIT 许可证。
+## 许可证
+
+[MIT](LICENSE)

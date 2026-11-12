@@ -53,7 +53,7 @@ for explanations; a widget complements the text, it does not replace it.
    `python3 {baseDir}/scripts/widget.py send /tmp/w.html --chat-id <CHAT_ID> --caption "<one line summary>" --chat-data @/tmp/w.json`
    `send` re-runs the check and refuses to send on errors. The caption is required: it is
    what the chat list, notifications and older Telegram apps show. Put the key fact in it
-   (e.g. `BTC $67,250 (-1.8% 24h)`).
+   (e.g. `NVDA $175.04 (-23.7% 1M)`).
    The output has `message_id`: remember it if you may update the widget later.
 5. **Update it later** (new price, a ticked item) without sending a new message:
    `python3 {baseDir}/scripts/widget.py edit --chat-id <CHAT_ID> --message-id <ID> --chat-data @/tmp/w2.json`
