@@ -89,16 +89,7 @@ including network failures.
 
 ## How it works
 
-```mermaid
-flowchart LR
-    Q([User asks]) --> W[Agent writes<br/>the widget]
-    W --> C{check}
-    C -- "fix hints" --> W
-    C -- OK --> S[send]
-    S --> T[(Telegram)]
-    T -. "new data" .-> E[edit]
-    E --> T
-```
+<p align="center"><img src="docs/flow.png" alt="The workflow: the user asks, the agent writes the widget from a template and data, check returns errors with fix hints until it passes, send delivers it, and edit updates the same card with new data" width="100%"></p>
 
 ## Quick start
 

@@ -81,16 +81,7 @@ bot token 只从环境变量读取，不会出现在任何输出、报错或日�
 
 ## 工作流程
 
-```mermaid
-flowchart LR
-    Q([用户提问]) --> W[agent 写出<br/>widget]
-    W --> C{check}
-    C -- "修复提示" --> W
-    C -- 通过 --> S[send]
-    S --> T[(Telegram)]
-    T -. "新数据" .-> E[edit]
-    E --> T
-```
+<p align="center"><img src="docs/flow.zh-CN.png" alt="工作流程：用户提问，agent 用模板和数据编写 widget，check 返回错误和修复提示直到通过，send 发出，edit 用新数据更新同一张卡片" width="100%"></p>
 
 ## 快速开始
 
