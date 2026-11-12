@@ -37,11 +37,13 @@ Both installs ran from this GitHub repository in an isolated home directory.
 ## Automated tests
 
 Run in CI on every push (Python 3.9, 3.11, 3.12, 3.13; plus a job with no JavaScript engine and a
-render job in headless Chromium).
+render job in headless Chromium and a slow-layout job in Telegram’s widget sandbox).
 
 | Suite | Coverage |
 |---|---|
 | Validator | Every template, a set of valid widgets, and one invalid widget per rule: links, dynamic code, the widget profile, sizes, state |
 | `send` / `edit` | Against a local fake Bot API: payloads, refusal before any request, Telegram errors, network errors, and the bot token never appearing in output |
 | Render | Every template in headless Chromium (dark theme) runs without errors and stays within 560 px at 320 px wide; runtime errors, network attempts and overflowing height are caught; screenshots are uploaded as CI artifacts |
+| Comparison layout | Text centers, right edges and non-overlapping columns at 280, 320 and 428 px in light and dark themes |
+| Telegram sandbox | The bundled examples draw their first content with a 1.2 s delay on synchronous layout queries. Edits to the same price widget remove and restore its sparkline, and reopening with only the quote keeps the chart hidden |
 | JavaScript engines | QuickJS, Node and the structural fallback each reject a syntax error on the right line and accept valid code; a QuickJS-only gap (newer syntax Node accepts) is reported as a warning, not an error |

@@ -22,6 +22,8 @@ HINTS: Dict[str, str] = {
     "svg-unsupported": "Telegram removes this SVG feature. Use shapes, paths, gradients, text and CSS animation.",
     "css-unsupported": "Telegram removes this CSS before drawing, so the widget will look different than in a "
                        "browser. Use the replacement named in the message or see references/widget-rules.md.",
+    "js-sync-layout": "Keep the first draw independent of host measurements. Use a fixed SVG viewBox "
+                      "or CSS columns, or read ResizeObserver entries after rendering.",
     "js-syntax": "Fix the JavaScript syntax error: the whole <script> fails to run in Telegram.",
     "js-network": "Widgets have no network access: every network API throws. Put the data into "
                   "chat_data/public_data when sending, or update it later with the edit command.",

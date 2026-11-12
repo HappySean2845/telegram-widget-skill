@@ -1,0 +1,11 @@
+{
+  "left": "BTC",
+  "right": "ETH",
+  "rows": [
+    {"metric": "Price", "left": "$73,540.01", "right": "$2,048.30"},
+    {"metric": "7 days", "left": "-8.53%", "right": "-15.28%"},
+    {"metric": "30 days", "left": "-12.38%", "right": "-19.13%"},
+    {"metric": "Market cap", "left": "$1.48T", "right": "$249.94B"},
+    {"metric": "Funding rate", "left": null, "right": "+0.0039%"}
+  ]
+}

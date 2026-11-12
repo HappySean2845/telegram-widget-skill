@@ -15,7 +15,7 @@ polyline{fill:none;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
 <div class="top"><span class="name" id="name">-</span><span class="sym" id="sym"></span></div>
 <div class="price" id="price">No data yet</div>
 <div><span class="chg" id="chg"></span> <span class="meta" id="span"></span></div>
-<svg viewBox="0 0 300 56" preserveAspectRatio="none"><polyline id="line" points=""/></svg>
+<svg id="chart" style="display:none" viewBox="0 0 300 56" preserveAspectRatio="none"><polyline id="line" points=""/></svg>
 <div class="meta" id="at"></div>
 <script>
 const TW = window.TelegramWidget;
@@ -41,11 +41,14 @@ function draw() {
   $('chg').className = 'chg ' + (up ? 'up' : 'down');
   $('span').textContent = s.w || '24h';
   const h = Array.isArray(s.h) ? s.h : [];
+  $('chart').style.display = h.length > 1 ? 'block' : 'none';
   if (h.length > 1) {
     const lo = Math.min(...h), hi = Math.max(...h), r = hi - lo || 1;
     $('line').setAttribute('points', h.map((v, i) =>
       (i / (h.length - 1) * 300).toFixed(1) + ',' + (53 - (v - lo) / r * 50).toFixed(1)).join(' '));
     $('line').setAttribute('class', up ? 'up-l' : 'down-l');
+  } else {
+    $('line').setAttribute('points', '');
   }
   if (s.t) {
     const d = new Date(s.t);

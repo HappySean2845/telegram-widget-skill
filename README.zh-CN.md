@@ -118,12 +118,12 @@ agent 会选用价格模板、填入数据、检查 widget，然后发到你的�
 
 ## 模板
 
-skill 自带五个模板。每个都是一个独立的 HTML 文件，从 `chat_data` 绘制，压缩后只有 1 到 1.3 KB，
-并跟随用户的 Telegram 主题切换浅色和深色。
+技能自带六个模板，都从 `chat_data` 绘制，并跟随用户的 Telegram 主题切换浅色和深色。
 
 | 模板 | 用途 |
 |---|---|
-| [`price-snapshot`](examples/price-snapshot.html) | 股票、代币或汇率：价格、涨跌幅和走势线 |
+| [`price-snapshot`](examples/price-snapshot.html) | 价格、涨跌幅和可选走势线。更新时省略 `h` 即可收起图表 |
+| [`token-comparison`](examples/token-comparison.html) | 双币对比，表头和数值按列对齐，缺失指标显示为 — |
 | [`poll-results`](examples/poll-results.html) | 投票结果，带占比和总票数 |
 | [`checklist`](examples/checklist.html) | 一组任务的完成进度 |
 | [`bar-chart`](examples/bar-chart.html) | 带标签的小柱状图，可高亮一根 |
@@ -146,6 +146,7 @@ python3 scripts/widget.py check card.html --chat-data @state.json
 | HTML 和 SVG | 不能有表单控件、音视频、iframe、外部脚本或图片、`data:` 形式的 SVG 图片、表现类或焦点类属性、`clipPath`、`mask`、SMIL 或 `foreignObject` |
 | CSS | 不能用 `vh` 系列单位、滚动溢出、sticky 定位、逻辑属性、多列布局、`oklch()` 或 `color-mix()`、文字阴影、行数截断、3D 变换、不支持的 filter、`clip-path`、mask、混合模式、具名字体、`@font-face`、`@import`、`@container`、`@layer`、嵌套、`:has()`、`:focus`、hover 或 print 媒体查询、远程 `url()` |
 | JavaScript | 语法正确（QuickJS，其次 Node，都没有就做结构检查）；不能用网络 API、页面跳转、弹窗、剪贴板、canvas 回读、WebGL，以及触摸、键盘和滚动事件 |
+| 布局 | 遇到同步读取尺寸或位置的代码会给出警告，这类读取可能拖慢 Telegram 首屏 |
 | 链接 | 见下文的严格策略 |
 | 上限 | 2,000 个节点、400 条 CSS 规则、32 个 `@keyframes`、每个属性 8,192 个字符 |
 
