@@ -1,7 +1,7 @@
 ---
 name: telegram-widget-skill
 description: Reply on Telegram with an HTML widget card (price, poll, checklist, chart, countdown) when an answer is better seen than read; checks it, then sends or updates it.
-version: 1.0.1
+version: 1.0.2
 author: HappySean2845
 license: MIT
 compatibility: Telegram Bot API 10.4+, python3. Hermes Agent and OpenClaw.

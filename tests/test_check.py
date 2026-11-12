@@ -195,6 +195,57 @@ def test_bad_widgets(label):
     assert rule in errors, (rule, [i.to_dict() for i in report.issues])
 
 
+# --- every way to reach window.open with a destination the checker cannot see --------------
+
+STATE = "TelegramWidget.chatData"
+LINK_BYPASSES = {
+    "window alias": ("const w = window; w.open(%s);" % STATE, "link-dynamic"),
+    "alias of an alias": ("const w = window; const v = w; v.open(%s);" % STATE, "link-dynamic"),
+    "top alias": ("const w = top; w.open(%s);" % STATE, "link-dynamic"),
+    "top alias, computed": ("const w = top; const o = w[%s]; o('x');" % STATE, "js-computed-access"),
+    "window as argument": ("function g(w) { w.open(%s); } g(window);" % STATE, "js-global-escape"),
+    "top as argument": ("function g(w) { w.open(%s); } g(top);" % STATE, "link-dynamic"),
+    "this": ("this.open(%s);" % STATE, "link-dynamic"),
+    "method taken off window": ("const o = window.open; o(%s);" % STATE, "link-dynamic"),
+    "method taken off a parameter": ("function g(w) { const o = w.open; o(%s); } g(top);" % STATE, "link-dynamic"),
+    "method destructured": ("function g(w) { const { open: o } = w; o(%s); } g(top);" % STATE, "link-dynamic"),
+    "open.call": ("function g(w) { w.open.call(w, %s); } g(top);" % STATE, "link-dynamic"),
+    "window in an array": ("const a = [window]; a[0].open(%s);" % STATE, "js-global-escape"),
+    "window in an object": ("const o = { w: window }; o.w.open(%s);" % STATE, "js-global-escape"),
+    "window from a ternary": ("const w = 1 ? window : null; w.open(%s);" % STATE, "js-global-escape"),
+    "window from ||": ("const w = null || window; w.open(%s);" % STATE, "js-global-escape"),
+    "document alias write": ("const d = document; d.write(%s);" % STATE, "js-html-injection"),
+    "alias with a literal": ("const w = top; w.open('https://evil.example.net');", "link-not-allowed"),
+}
+
+
+@pytest.mark.parametrize("label", sorted(LINK_BYPASSES))
+def test_link_bypasses_are_refused(label):
+    code, rule = LINK_BYPASSES[label]
+    errors, report = rules(script(code))
+    assert rule in errors, (rule, [i.to_dict() for i in report.issues])
+
+
+LEGIT_OPEN_AND_GLOBALS = {
+    "details.open property": "const d = document.getElementById('out'); d.open = true; if (d.open) { d.open = false; }",
+    "reading .open": "const d = document.getElementById('out'); const isOpen = d.open; d.title = String(isOpen);",
+    "a local named top": "function place(left, top) { return left + top; } place(1, 2);",
+    "const self = this": "function F() { const self = this; self.n = 1; } new F();",
+    "typeof window": "if (typeof window !== 'undefined' && window.TelegramWidget) { }",
+    "'x' in window": "const has = 'TelegramWidget' in window;",
+    "window && member": "const TW = window && window.TelegramWidget;",
+    "methods named open": "const menu = { open(i) { return i; } }; class P { open(i) { return i; } }",
+    "open() without arguments": "const d = { open() {} }; d.open();",
+    "window.open with an allowed literal": "document.getElementById('out').onclick = () => window.open('https://example.com/a');",
+}
+
+
+@pytest.mark.parametrize("label", sorted(LEGIT_OPEN_AND_GLOBALS))
+def test_legit_uses_of_open_and_globals_pass(label):
+    errors, report = rules(script(LEGIT_OPEN_AND_GLOBALS[label]))
+    assert report.ok, [i.to_dict() for i in report.errors]
+
+
 def test_empty_allowlist_refuses_every_link():
     errors, _ = rules("<a href=\"https://example.com/\">x</a>", allow=[])
     assert errors == {"link-not-allowed"}

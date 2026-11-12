@@ -160,7 +160,8 @@ agent 每天都在读陌生人写的网页、帖子和消息，其中任何一�
 - widget、状态数据和 caption 里任何像 URL 的字符串，都会先解码转义，再过同一份白名单。
 - 所有能在运行时拼出名字或 URL 的写法一律拒绝：`eval`、`Function`、`.constructor`、`atob`、
   `String.fromCharCode`、`import()`、字符串定时器、标识符里的 unicode 转义、字面量字符串拼接、
-  在 `window`、`document` 或 `TelegramWidget` 上做计算属性访问、给 `TelegramWidget` 起别名、
+  在 `window`、`document` 或 `TelegramWidget` 上做计算属性访问、给 `TelegramWidget` 起别名、把 `window` 或 `document` 当作值传递（这样任何别名都碰不到 `window.open`）、
+  用字面量 URL 以外的参数调用任何 `.open(...)`、
   `innerHTML` 及其他一切从字符串生成 HTML 的 API，以及在代码里设置 `href`、`src` 或事件处理器。
 
 **适用范围。** 这是给「按 skill 办事的 agent」装的护栏，不是针对 agent 本身的沙箱：

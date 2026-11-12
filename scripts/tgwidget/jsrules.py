@@ -67,6 +67,13 @@ BANNED_TAGS = {
     "input", "select", "textarea", "portal", "fencedframe", "template", "foreignobject", "image",
 }
 GLOBAL_OBJECTS = {"window", "self", "top", "parent", "frames", "document", "globalThis"}
+# Globals that may not be used as a value at all (assigned, passed, returned, stored): an alias of
+# window could reach window.open where the checker no longer sees it. top, parent and frames double
+# as ordinary variable names (`fillRect(left, top, ...)`), so those are only tracked through plain
+# assignments; globalThis is refused outright (DYNAMIC_CODE).
+VALUE_ESCAPE_GLOBALS = {"window", "self", "document"}
+# What may follow an expression that ends at a token: the end of a statement or of an argument
+EXPR_END = (";", ",", ")", "}", "]", "||", "??", "&&", ":", "?")
 DATA_IMAGE = re.compile(r"(?i)^data:image/(png|jpe?g|gif|webp)[;,]")
 
 
@@ -95,6 +102,7 @@ class ScriptChecker:
         self.allow = allow
         self.element_ids = set(element_ids)
         self.uses_requests = False
+        self._globals: Set[str] = set(GLOBAL_OBJECTS)  # plus aliases, per script in check()
         # tokens of every script, for the cross-script id check
         self.all_tokens: List[Token] = []
 
@@ -105,6 +113,9 @@ class ScriptChecker:
     def check(self, tokens: List[Token]) -> None:
         self.all_tokens.extend(tokens)
         aliases = self._widget_aliases(tokens)
+        # window and its kin, plus names assigned from them (`w = window`, `p = top`)
+        self._globals = GLOBAL_OBJECTS | self._global_aliases(tokens)
+        open_refs = self._open_refs(tokens)  # names holding some object's .open method
         validated: Set[int] = set()  # ids of string tokens already judged as link targets
 
         for idx, t in enumerate(tokens):
@@ -137,7 +148,7 @@ class ScriptChecker:
             elif name == "with" and not after_dot and nxt is not None and nxt.is_punct("("):
                 self._err("js-dynamic-code", "with statements are not allowed", t)
             elif name in HTML_INJECTION or (
-                name in ("write", "writeln") and after_dot and prev2 is not None and prev2.is_ident("document")
+                name in ("write", "writeln") and after_dot and prev2 is not None and prev2.value in self._globals
             ):
                 self._err("js-html-injection", "%s parses HTML from a string" % name, t)
             elif name in UNSUPPORTED:
@@ -145,7 +156,7 @@ class ScriptChecker:
             elif name in NAVIGATOR_UNSUPPORTED and after_dot and prev2 is not None and prev2.is_ident("navigator"):
                 self._err("js-unsupported", "navigator.%s is not available in widgets" % name, t)
             elif name in DIALOGS and nxt is not None and nxt.is_punct("(") and (
-                not after_dot or (prev2 is not None and prev2.value in GLOBAL_OBJECTS)
+                not after_dot or (prev2 is not None and prev2.value in self._globals)
             ):
                 self._err("js-unsupported", "%s() shows nothing in a widget" % name, t)
             elif name == "print" and after_dot and prev2 is not None and prev2.is_ident("window"):
@@ -194,6 +205,10 @@ class ScriptChecker:
 
             if name == "TelegramWidget" or name in aliases:
                 self._widget_use(tokens, idx, aliases)
+            if name in VALUE_ESCAPE_GLOBALS and not after_dot:
+                self._global_use(tokens, idx)
+            if name in open_refs and not after_dot:
+                self._open_ref_use(tokens, idx, validated)
 
         # every string literal: URLs must be allowlisted, no javascript: URLs
         for t in tokens:
@@ -288,7 +303,7 @@ class ScriptChecker:
         if not member_access:
             return
         obj = tokens[idx - 2] if prev.is_punct("?.") and idx >= 2 else prev
-        if obj.kind == "ident" and (obj.value in GLOBAL_OBJECTS or obj.value == "TelegramWidget"
+        if obj.kind == "ident" and (obj.value in self._globals or obj.value == "TelegramWidget"
                                     or obj.value in aliases):
             self._err("js-computed-access", "computed access on %s" % obj.value, tokens[idx])
             return
@@ -308,7 +323,7 @@ class ScriptChecker:
     def _navigation(self, t, prev, prev2, nxt, tokens, idx) -> None:
         after_dot = prev is not None and prev.is_punct(".", "?.")
         if after_dot:
-            if prev2 is not None and prev2.value in GLOBAL_OBJECTS:
+            if prev2 is not None and prev2.value in self._globals:
                 self._err("js-navigation", "%s.%s: widgets cannot navigate" % (prev2.value, t.value), t)
             return
         if nxt is not None and (nxt.is_punct("=") or (
@@ -344,17 +359,121 @@ class ScriptChecker:
     def _open(self, tokens, idx, prev, prev2, after_dot, validated) -> None:
         t = tokens[idx]
         nxt = tokens[idx + 1] if idx + 1 < len(tokens) else None
-        if after_dot and (prev2 is None or prev2.value not in GLOBAL_OBJECTS):
-            return  # details.open, someObject.open: not window.open
         if not after_dot and nxt is not None and nxt.is_punct(":"):
-            return  # object key
+            return  # object key (`{open: x}` destructuring is tracked by _open_refs)
         if not after_dot and prev is not None and prev.is_ident("let", "const", "var", "function"):
             return
+        if nxt is not None and nxt.is_punct("(") and self._is_definition(tokens, idx + 1):
+            return  # a method named open: `open(i) { ... }`
+        on_global = not after_dot or (prev2 is not None and prev2.value in self._globals)
+        if not on_global:
+            # details.open, menu.open(): usually not window.open, but the object may be window under a
+            # name the checker cannot follow (a parameter, `this`), so a call that passes anything
+            # must pass one literal URL, and the method may not be taken off the object.
+            if nxt is not None and nxt.is_punct(".") and idx + 2 < len(tokens) and tokens[idx + 2].is_ident(
+                    "call", "apply", "bind"):
+                self._err("link-dynamic", ".open.%s: open links as window.open('https://...')"
+                          % tokens[idx + 2].value, t)
+            elif nxt is not None and nxt.is_punct("(") and not (
+                    idx + 2 < len(tokens) and tokens[idx + 2].is_punct(")")):
+                self._call_with_literal_url(tokens, idx, validated,
+                                            ".open(...) with an argument must take one literal URL, since its "
+                                            "object could be window; name other methods differently (show, expand)")
+            return
+        if nxt is not None and nxt.is_punct("(") and idx + 2 < len(tokens) and tokens[idx + 2].is_punct(")"):
+            return  # window.open(): no destination
+        self._call_with_literal_url(tokens, idx, validated, "window.open must be called with one literal URL")
+
+    def _call_with_literal_url(self, tokens, idx, validated, message) -> None:
         arg = self._single_literal_arg(tokens, idx)
         if arg is None:
-            self._err("link-dynamic", "window.open must be called with one literal URL", t)
+            self._err("link-dynamic", message, tokens[idx])
+        else:
+            self._judge_link(arg, "href", validated)
+
+    @staticmethod
+    def _is_definition(tokens: List[Token], open_paren: int) -> bool:
+        """tokens[open_paren] is '(' after a name: is this `name(...) {`, a method definition?"""
+        depth = 0
+        for j in range(open_paren, len(tokens)):
+            if tokens[j].is_punct("("):
+                depth += 1
+            elif tokens[j].is_punct(")"):
+                depth -= 1
+                if depth == 0:
+                    return j + 1 < len(tokens) and tokens[j + 1].is_punct("{")
+        return False
+
+    @staticmethod
+    def _global_aliases(tokens: List[Token]) -> Set[str]:
+        """Names assigned a global object as a whole: `w = window`, `p = top`, `x = w`."""
+        names: Set[str] = set()
+        changed = True
+        while changed:
+            changed = False
+            for i, t in enumerate(tokens):
+                if t.kind != "ident" or not (t.value in GLOBAL_OBJECTS or t.value in names):
+                    continue
+                if i >= 1 and tokens[i - 1].is_punct(".", "?."):
+                    continue  # obj.window is some property
+                after = tokens[i + 1] if i + 1 < len(tokens) else None
+                if after is not None and after.kind == "punct" and after.value not in EXPR_END:
+                    continue  # `x = top + 5`, `x = window.foo`: not the object itself
+                if i >= 2 and tokens[i - 1].is_punct("=") and tokens[i - 2].kind == "ident":
+                    name = tokens[i - 2].value
+                    if name not in GLOBAL_OBJECTS and name not in names:
+                        names.add(name)
+                        changed = True
+        return names
+
+    @staticmethod
+    def _open_refs(tokens: List[Token]) -> Set[str]:
+        """Names that hold some object's open method: `o = w.open`, `const {open: o} = w`."""
+        names: Set[str] = set()
+        for i, t in enumerate(tokens):
+            if not t.is_ident("open"):
+                continue
+            after = tokens[i + 1] if i + 1 < len(tokens) else None
+            if i >= 1 and tokens[i - 1].is_punct(".", "?.") and (
+                    after is None or after.kind != "punct" or after.value in EXPR_END):
+                j = i - 1  # walk back over `a.b.c.` to the start of the member chain
+                while j >= 1 and tokens[j].is_punct(".", "?.") and tokens[j - 1].kind == "ident":
+                    j -= 2
+                if j >= 1 and tokens[j].is_punct("=") and tokens[j - 1].kind == "ident":
+                    names.add(tokens[j - 1].value)
+            elif after is not None and after.is_punct(":") and i + 2 < len(tokens) and tokens[i + 2].kind == "ident":
+                names.add(tokens[i + 2].value)
+        names.discard("open")
+        return names
+
+    def _open_ref_use(self, tokens: List[Token], idx: int, validated: Set[int]) -> None:
+        t = tokens[idx]
+        prev = tokens[idx - 1] if idx > 0 else None
+        nxt = tokens[idx + 1] if idx + 1 < len(tokens) else None
+        if nxt is None or (prev is not None and prev.is_ident("let", "const", "var", "function")):
             return
-        self._judge_link(arg, "href", validated)
+        if nxt.is_punct(".") and idx + 2 < len(tokens) and tokens[idx + 2].is_ident("call", "apply", "bind"):
+            self._err("link-dynamic", "%s holds an open method: open links as window.open('https://...')" % t.value, t)
+        elif nxt.is_punct("(") and not (idx + 2 < len(tokens) and tokens[idx + 2].is_punct(")")):
+            self._call_with_literal_url(tokens, idx, validated,
+                                        "%s holds an open method: call it with one literal URL" % t.value)
+
+    def _global_use(self, tokens: List[Token], idx: int) -> None:
+        """window, self or document anywhere but `window.x`: as a value it could become an alias."""
+        t = tokens[idx]
+        prev = tokens[idx - 1] if idx > 0 else None
+        nxt = tokens[idx + 1] if idx + 1 < len(tokens) else None
+        if nxt is not None and nxt.is_punct(".", "?.", "[", "&&", "?", "===", "!==", "==", "!="):
+            return  # member access ([ is judged as computed access), a test, a comparison
+        if prev is not None and (prev.is_ident("typeof", "in", "let", "const", "var", "function", "class")
+                                 or prev.is_punct("!", "===", "!==", "==", "!=")):
+            return  # typeof window, 'x' in window, declaring a local named self
+        if nxt is not None and nxt.is_punct("="):
+            return  # assigned to, not read
+        if nxt is not None and nxt.is_punct(":") and prev is not None and prev.is_punct("{", ","):
+            return  # an object key named window
+        self._err("js-global-escape", "%s used as a value (assigned, passed, returned or stored): use %s.<member> "
+                                      "directly" % (t.value, t.value), t)
 
     def _link_prop(self, tokens, idx, name, validated) -> None:
         t = tokens[idx]

@@ -44,6 +44,8 @@ HINTS: Dict[str, str] = {
                           "on window/document/TelegramWidget, can hide forbidden names.",
     "js-widget-escape": "Use TelegramWidget only as TelegramWidget.<member> (or through one alias such as "
                         "const TW = window.TelegramWidget). Do not pass it around, spread it or enumerate it.",
+    "js-global-escape": "Use window, self and document only as window.<member> (document.getElementById(...)). "
+                        "Do not assign them to variables, pass them to functions, return or store them.",
     "js-element": "Create elements with a literal tag name, and never script, iframe, object, embed, link, "
                   "meta, base or form elements.",
     "js-timer-string": "Pass a function to setTimeout/setInterval, never a string of code.",

@@ -177,7 +177,8 @@ that this cannot work:
 - Every way to build a name or a URL at runtime is refused: `eval`, `Function`, `.constructor`,
   `atob`, `String.fromCharCode`, `import()`, string timers, unicode escapes in identifiers, string
   concatenation of literals, computed member access on `window`, `document` or `TelegramWidget`,
-  aliasing `TelegramWidget`, `innerHTML` and every other HTML-from-string API, and setting `href`,
+  aliasing `TelegramWidget`, using `window` or `document` as a value (so no alias can reach
+  `window.open`), calling any `.open(...)` with something other than one literal URL, `innerHTML` and every other HTML-from-string API, and setting `href`,
   `src` or event handlers from code.
 
 **Scope.** This is a guardrail for an agent that follows its skill. It is not a sandbox against
