@@ -3,10 +3,11 @@ name: telegram-widgets
 description: Telegram HTML widgets - live cards in a private chat (prices, polls, checklists, charts, countdowns). Use when you reply on Telegram and the answer is better seen than read. Writes the widget, validates it with a strict checker, sends it with sendWidget and updates it later.
 license: MIT
 compatibility: Telegram Bot API 10.4+, python3. Hermes Agent and OpenClaw.
+allowed-tools: "Bash(python3:*)"
 required_environment_variables:
   - name: TG_WIDGETS_BOT_TOKEN
     prompt: Telegram bot token (the same bot your agent's Telegram channel uses)
-    help: The token from @BotFather. The skill only calls sendWidget, editMessageWidgetData and editMessageCaption.
+    help: The token from @BotFather. The skill sends it only to api.telegram.org (or a Bot API server on localhost), to call sendWidget, editMessageWidgetData and editMessageCaption.
 metadata:
   hermes:
     tags: [telegram, widgets, ui]
@@ -69,7 +70,8 @@ Only the private chat with the user you are talking to.
 - **OpenClaw**: pass the `chat_id` from this turn's conversation info as it is, e.g.
   `--chat-id telegram:123456789`.
 
-The CLI refuses another chat than the current conversation, groups and channels.
+`send` and `edit` both refuse another chat (or, in Hermes, another topic) than the current
+conversation, and groups and channels.
 
 **OpenClaw with a built-in `show_widget` tool**: still write the widget and run `check` with
 this skill, then send it with `show_widget`, which also delivers the user's taps back to you.
@@ -87,6 +89,19 @@ this skill, then send it with `show_widget`, which also delivers the user's taps
 - At most 4096 bytes after compression; the check reports `compressed_bytes`.
 - Do not use `TelegramWidget.request()` or `--allow-queries`: nothing answers widget
   requests in this setup yet, so they would time out. Draw from `chat_data` only.
+
+## Files
+
+- [scripts/widget.py](scripts/widget.py): the CLI (`check`, `send`, `edit`, `render`); its code is in `scripts/tgwidget/`
+- [references/widget-rules.md](references/widget-rules.md): the widget rules, for writing a new widget
+- Templates, each an `.html` with a sample `.json` state:
+  [price-snapshot](examples/price-snapshot.html), [poll-results](examples/poll-results.html),
+  [checklist](examples/checklist.html), [bar-chart](examples/bar-chart.html),
+  [countdown](examples/countdown.html)
+
+The CLI runs with `python3`, reads the files you pass it, and calls only the Telegram Bot API. It
+writes nothing but a temporary file for `node --check` and the screenshot you ask `render` for,
+and it never runs the widget's code except in that optional headless-browser `render`.
 
 Optional, if Playwright is installed: `python3 {baseDir}/scripts/widget.py render /tmp/w.html --chat-data @/tmp/w.json --out /tmp/w.png`
 runs it in a headless browser, reports runtime errors and the height (max 600 px), and

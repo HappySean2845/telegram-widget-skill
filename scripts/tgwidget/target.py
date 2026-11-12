@@ -18,7 +18,7 @@ from __future__ import annotations
 import json
 import os
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Optional
 
 _REF = re.compile(r"^(?:telegram:|tg:)?(-?\d+|@[A-Za-z0-9_]{4,})(?::(?:topic|direct-topic):(\d+))?$")
@@ -86,9 +86,14 @@ def resolve(chat_arg: Optional[str], thread_arg: Optional[int] = None) -> Target
         if session and target.thread_id is None:
             target.thread_id = session.thread_id
     elif session:
-        target = session
+        target = replace(session)  # a copy: --thread-id must not rewrite the session itself
     else:
         raise TargetError("no chat id: pass --chat-id (the private chat with the user, e.g. telegram:123456)")
     if thread_arg is not None:
         target.thread_id = thread_arg
+    # Hermes says which topic the conversation is in (none when HERMES_SESSION_THREAD_ID is
+    # empty), so the topic is part of "the current conversation" there too.
+    if session and session.source == "HERMES_SESSION_CHAT_ID" and target.thread_id != session.thread_id:
+        raise TargetError("topic %s is not the current conversation's topic (%s from HERMES_SESSION_THREAD_ID)"
+                          % (target.thread_id, session.thread_id or "none"))
     return target

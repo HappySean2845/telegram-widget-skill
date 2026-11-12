@@ -121,6 +121,17 @@ def _need_token():
     return token
 
 
+def _bot_api(token: str, test_env: bool) -> BotApi:
+    try:
+        return BotApi(token, test_env=test_env)
+    except ValueError as e:
+        raise SystemExit(_usage_error(str(e)))
+
+
+PRIVATE_ONLY = ("in production, widgets live only in a private chat with a user (a positive numeric "
+                "chat id); groups, channels and @usernames are refused")
+
+
 def cmd_send(args) -> int:
     try:
         target = resolve(args.chat_id, args.thread_id)
@@ -131,8 +142,7 @@ def cmd_send(args) -> int:
         return _usage_error("--caption is required: it is the chat-list text and what apps without widget "
                             "support show instead of the widget")
     if not args.test_env and not target.is_private:
-        return _usage_error("in production, widgets can only be sent to a private chat with a user "
-                            "(a positive numeric chat id); groups, channels and @usernames are refused")
+        return _usage_error(PRIVATE_ONLY)
 
     html = _read_html(args.file)
     report = _full_check(args, html)
@@ -170,7 +180,7 @@ def cmd_send(args) -> int:
 
     token = _need_token()
     try:
-        msg = BotApi(token, test_env=args.test_env).call("sendWidget", payload)
+        msg = _bot_api(token, args.test_env).call("sendWidget", payload)
     except TelegramError as e:
         _out({"ok": False, "sent": False, "telegram_error": e.to_dict(), "warnings": report.to_dict()["warnings"]},
              token)
@@ -189,6 +199,8 @@ def cmd_edit(args) -> int:
         target = resolve(args.chat_id)
     except TargetError as e:
         return _usage_error(str(e))
+    if not args.test_env and not target.is_private:
+        return _usage_error(PRIVATE_ONLY)
     if not args.message_id:
         return _usage_error("--message-id is required (from the output of send)")
     chat_data = _read_value(args.chat_data)
@@ -210,7 +222,7 @@ def cmd_edit(args) -> int:
         return 1
 
     token = _need_token()
-    api = BotApi(token, test_env=args.test_env)
+    api = _bot_api(token, args.test_env)
     target = {"chat_id": target.api_chat_id(), "message_id": args.message_id}
     done = []
     try:

@@ -187,6 +187,41 @@ def test_hermes_session_is_the_default_and_the_only_target(api, capsys, monkeypa
     assert len(api.calls) == 1
 
 
+def test_hermes_session_fixes_the_topic_too(api, capsys, monkeypatch):
+    monkeypatch.setenv("HERMES_SESSION_PLATFORM", "telegram")
+    monkeypatch.setenv("HERMES_SESSION_CHAT_ID", "1001")
+    monkeypatch.setenv("HERMES_SESSION_THREAD_ID", "7")
+    code, out = run(capsys, "send", EXAMPLE, "--caption", "x")
+    assert code == 0 and api.calls[-1][2]["message_thread_id"] == 7
+    for argv in (["--thread-id", "8"], ["--chat-id", "telegram:1001:topic:9"]):
+        code, out = run(capsys, "send", EXAMPLE, "--caption", "x", *argv)
+        assert code == 2 and "topic" in out["errors"][0]["message"]
+    monkeypatch.delenv("HERMES_SESSION_THREAD_ID")
+    code, out = run(capsys, "send", EXAMPLE, "--caption", "x", "--thread-id", "5")
+    assert code == 2
+    assert len(api.calls) == 1
+
+
+def test_edit_is_private_chat_only_like_send(api, capsys):
+    code, out = run(capsys, "edit", "--chat-id", "-100123", "--message-id", "5", "--chat-data", "{}")
+    assert code == 2 and "private chat" in out["errors"][0]["message"]
+    assert api.calls == []
+    code, out = run(capsys, "edit", "--chat-id", "-100123", "--message-id", "5", "--chat-data", "{}", "--test-env")
+    assert code == 0 and api.calls[-1][0].endswith("/test/editMessageWidgetData")
+
+
+def test_api_base_must_be_telegram_or_this_machine(api, capsys, monkeypatch):
+    for base in ("https://evil.example.net", "https://api.telegram.org.evil.example.net",
+                 "http://api.telegram.org", "https://user@api.telegram.org", "https://api.telegram.org:8443"):
+        monkeypatch.setenv("TG_WIDGETS_API_BASE", base)
+        code, out = run(capsys, "send", EXAMPLE, "--chat-id", "1001", "--caption", "x")
+        assert code == 2 and "TG_WIDGETS_API_BASE" in out["errors"][0]["message"], base
+    assert api.calls == []
+    monkeypatch.setenv("TG_WIDGETS_API_BASE", "https://api.telegram.org/")
+    from tgwidget.telegram import BotApi
+    assert BotApi(TOKEN).api_base == "https://api.telegram.org"
+
+
 def test_not_telegram(api, capsys, monkeypatch):
     monkeypatch.setenv("HERMES_SESSION_PLATFORM", "discord")
     monkeypatch.setenv("HERMES_SESSION_CHAT_ID", "1001")

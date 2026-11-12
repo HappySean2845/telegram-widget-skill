@@ -250,7 +250,7 @@ Telegram 报错时只返回 Telegram 的 `description`。
 | `TELEGRAM_BOT_TOKEN` | bot token，上一个变量没设置时使用 |
 | `TG_WIDGETS_ALLOWED_LINKS` | widget 允许链接的域名，用空格或逗号分隔；为空表示不允许任何链接 |
 | `TG_WIDGETS_CHAT_ID` | 单独使用命令行时的默认聊天 |
-| `TG_WIDGETS_API_BASE` | 自建的 Bot API 服务器，代替 `https://api.telegram.org` |
+| `TG_WIDGETS_API_BASE` | 本机（`localhost`）上自建的 Bot API 服务器，代替 `https://api.telegram.org`；其他主机一律拒绝，因为 token 会发给它 |
 
 ## 兼容性
 

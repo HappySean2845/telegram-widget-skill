@@ -272,7 +272,7 @@ Every command prints one JSON object and exits with `0` (ok), `1` (refused or fa
 | `TELEGRAM_BOT_TOKEN` | Bot token, used when the variable above is not set |
 | `TG_WIDGETS_ALLOWED_LINKS` | Hosts widgets may link to, separated by spaces or commas; empty means no links |
 | `TG_WIDGETS_CHAT_ID` | Default chat for standalone use |
-| `TG_WIDGETS_API_BASE` | A self-hosted Bot API server instead of `https://api.telegram.org` |
+| `TG_WIDGETS_API_BASE` | A Bot API server on this machine (`localhost`) instead of `https://api.telegram.org`; any other host is refused, since the token is sent to it |
 
 ## Compatibility
 

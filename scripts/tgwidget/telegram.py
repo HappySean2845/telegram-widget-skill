@@ -14,10 +14,30 @@ import socket
 import urllib.error
 import urllib.request
 from typing import Any, Dict, Optional
+from urllib.parse import urlsplit
 
 TOKEN_ENV_VARS = ("TG_WIDGETS_BOT_TOKEN", "TELEGRAM_BOT_TOKEN")
 API_BASE_ENV = "TG_WIDGETS_API_BASE"
 DEFAULT_API_BASE = "https://api.telegram.org"
+LOOPBACK_HOSTS = ("localhost", "127.0.0.1", "::1")
+
+
+def check_api_base(base: str) -> str:
+    """Return `base` without a trailing slash, or raise ValueError.
+
+    The bot token is part of every request URL, so whoever runs the server at
+    `base` gets the token. Only Telegram's own API and a Bot API server on this
+    machine qualify: a command line that points the CLI anywhere else is refused.
+    """
+    parts = urlsplit(base.strip())
+    host = (parts.hostname or "").lower()
+    clean = parts.scheme in ("http", "https") and not (parts.username or parts.password or parts.query or parts.fragment)
+    official = parts.scheme == "https" and host == "api.telegram.org" and parts.port in (None, 443)
+    local = host in LOOPBACK_HOSTS or host.endswith(".localhost")
+    if not (clean and (official or local)):
+        raise ValueError("%s must be %s or a Bot API server on this machine (localhost): the bot token "
+                         "is sent to it" % (API_BASE_ENV, DEFAULT_API_BASE))
+    return base.strip().rstrip("/")
 
 
 class TelegramError(Exception):
@@ -58,7 +78,7 @@ class BotApi:
     def __init__(self, token: str, test_env: bool = False, api_base: Optional[str] = None, timeout: float = 30):
         self._token = token
         self.test_env = test_env
-        self.api_base = (api_base or os.environ.get(API_BASE_ENV) or DEFAULT_API_BASE).rstrip("/")
+        self.api_base = check_api_base(api_base or os.environ.get(API_BASE_ENV) or DEFAULT_API_BASE)
         self.timeout = timeout
 
     def __repr__(self) -> str:  # never show the token, even in a traceback's locals
