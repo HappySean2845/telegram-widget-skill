@@ -91,12 +91,12 @@ including network failures.
 
 ```mermaid
 flowchart LR
-    Q([User asks on Telegram]) --> W[Agent writes the widget<br/>from a template + data]
-    W --> C{widget.py check}
-    C -- "errors with fix hints" --> W
-    C -- OK --> S[widget.py send]
-    S --> T[(Telegram<br/>sendWidget)]
-    T -. "new data later" .-> E[widget.py edit]
+    Q([User asks]) --> W[Agent writes<br/>the widget]
+    W --> C{check}
+    C -- "fix hints" --> W
+    C -- OK --> S[send]
+    S --> T[(Telegram)]
+    T -. "new data" .-> E[edit]
     E --> T
 ```
 
@@ -259,11 +259,13 @@ Or run `scripts/widget.py` from a checkout.
 ## CLI reference
 
 ```bash
-python3 scripts/widget.py check  card.html [--chat-data JSON|@file] [--public-data …] [--text]
-python3 scripts/widget.py render card.html --out card.png [--scheme dark] [--width 320]
-python3 scripts/widget.py send   card.html --chat-id ID --caption TEXT [--chat-data …] [--dry-run]
-python3 scripts/widget.py edit   --chat-id ID --message-id N [--chat-data …] [--caption TEXT]
+widget.py check  card.html [--chat-data @state.json] [--text]
+widget.py render card.html --out card.png [--scheme dark]
+widget.py send   card.html --chat-id ID --caption TEXT [--chat-data …] [--dry-run]
+widget.py edit   --chat-id ID --message-id N [--chat-data …] [--caption TEXT]
 ```
+
+`widget.py` stands for `python3 scripts/widget.py` in the skill folder, or `tgwidget` after a pip install.
 
 Every command prints one JSON object and exits with `0` (ok), `1` (refused or failed) or `2`
 (usage error). Telegram errors are reported with Telegram's `description` only.

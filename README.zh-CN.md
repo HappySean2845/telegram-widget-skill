@@ -83,12 +83,12 @@ bot token 只从环境变量读取，不会出现在任何输出、报错或日�
 
 ```mermaid
 flowchart LR
-    Q([用户在 Telegram 提问]) --> W[agent 用模板和数据<br/>写出 widget]
-    W --> C{widget.py check}
-    C -- "错误 + 修复提示" --> W
-    C -- 通过 --> S[widget.py send]
-    S --> T[(Telegram<br/>sendWidget)]
-    T -. "之后有新数据" .-> E[widget.py edit]
+    Q([用户提问]) --> W[agent 写出<br/>widget]
+    W --> C{check}
+    C -- "修复提示" --> W
+    C -- 通过 --> S[send]
+    S --> T[(Telegram)]
+    T -. "新数据" .-> E[edit]
     E --> T
 ```
 
@@ -237,11 +237,13 @@ tgwidget check card.html
 ## 命令参考
 
 ```bash
-python3 scripts/widget.py check  card.html [--chat-data JSON|@file] [--public-data …] [--text]
-python3 scripts/widget.py render card.html --out card.png [--scheme dark] [--width 320]
-python3 scripts/widget.py send   card.html --chat-id ID --caption TEXT [--chat-data …] [--dry-run]
-python3 scripts/widget.py edit   --chat-id ID --message-id N [--chat-data …] [--caption TEXT]
+widget.py check  card.html [--chat-data @state.json] [--text]
+widget.py render card.html --out card.png [--scheme dark]
+widget.py send   card.html --chat-id ID --caption TEXT [--chat-data …] [--dry-run]
+widget.py edit   --chat-id ID --message-id N [--chat-data …] [--caption TEXT]
 ```
+
+`widget.py` 指 skill 目录下的 `python3 scripts/widget.py`，pip 安装后也可以用 `tgwidget`。
 
 每个命令都输出一个 JSON 对象，退出码为 `0`（成功）、`1`（被拒或失败）或 `2`（用法错误）。
 Telegram 报错时只返回 Telegram 的 `description`。
