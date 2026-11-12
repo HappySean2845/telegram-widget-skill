@@ -69,8 +69,14 @@ stricter rules this skill's checker enforces. When in doubt, the official page w
 - JS: ES2023, Promises, async/await, timers, `requestAnimationFrame`, the DOM
   (`createElement`, `createElementNS`, `querySelector`, `textContent`, `classList`, `style`,
   `dataset`, `addEventListener`, `replaceChildren`), `MutationObserver`, `ResizeObserver`,
-  layout reads (cache them), canvas 2D, `Intl` in `navigator.language`, `localStorage` (4 KB
+  layout reads, canvas 2D, `Intl` in `navigator.language`, `localStorage` (4 KB
   per message, wrap in try/catch), `crypto.getRandomValues`, `TextEncoder`, `URL`.
+- Synchronous layout reads such as `getBoundingClientRect()` and `offsetWidth` wait for the
+  client. Even one slow read can time out the first draw. Give a sparkline a fixed SVG
+  `viewBox` and a CSS width of 100%. For layout that depends on size, draw the initial
+  content first and use `ResizeObserver`'s `entry.contentRect` for later adjustments.
+- In comparison cards, give the header and every data row the same column widths. Long
+  values and missing values (—) should line up under the same token.
 - Element ids are **not** global variables: use `document.getElementById('x')`.
 
 ## What Telegram removes (do not use)

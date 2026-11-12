@@ -44,14 +44,15 @@ for explanations; a widget complements the text, it does not replace it.
 `scripts/widget.py`: run it as `python3 {baseDir}/scripts/widget.py ...`. It needs only Python 3.9+.
 
 1. **Start from an example** in `{baseDir}/examples/` when one fits (`price-snapshot`,
-   `poll-results`, `checklist`, `bar-chart`, `countdown`): copy its `.html` unchanged and only
-   write new `chat_data` in the shape of its `.json`. Otherwise read
+   `poll-results`, `checklist`, `bar-chart`, `countdown`, `token-comparison`). Copy its `.html`
+   and write new `chat_data` in the shape of its `.json`. Otherwise read
    `{baseDir}/references/widget-rules.md` first and write a new widget in that style.
 2. Write the HTML to a temporary file (e.g. `/tmp/w.html`) and the state to `/tmp/w.json`.
 3. **Check it**:
    `python3 {baseDir}/scripts/widget.py check /tmp/w.html --chat-data @/tmp/w.json`
    It prints JSON. If `ok` is false, fix every item in `errors` (each has a `hint`) and check
-   again. Never send a widget that does not pass.
+   again. For a `js-sync-layout` warning, check whether the first draw can use CSS or a fixed SVG
+   viewBox instead of waiting for a measurement. Never send a widget that does not pass.
 4. **Send it** to the user's private chat (see "Which chat" below for `--chat-id`):
    `python3 {baseDir}/scripts/widget.py send /tmp/w.html --chat-id <CHAT_ID> --caption "<one line summary>" --chat-data @/tmp/w.json`
    `send` re-runs the check and refuses to send on errors. The caption is required: it is
@@ -60,7 +61,8 @@ for explanations; a widget complements the text, it does not replace it.
    The output has `message_id`: remember it if you may update the widget later.
 5. **Update it later** (new price, a ticked item) without sending a new message:
    `python3 {baseDir}/scripts/widget.py edit --chat-id <CHAT_ID> --message-id <ID> --chat-data @/tmp/w2.json`
-   (`--caption` also works). The HTML stays; it redraws from the new data.
+   (`--caption` also works). For `price-snapshot`, send the quote without `h` to show only the
+   price summary. Include at least two history points in a later edit to show the line again.
 6. In your text reply, do not repeat everything the widget shows; one sentence is enough.
 
 ## Which chat
@@ -99,7 +101,7 @@ this skill, then send it with `show_widget`, which also delivers the user's taps
 - Templates, each an `.html` with a sample `.json` state:
   [price-snapshot](examples/price-snapshot.html), [poll-results](examples/poll-results.html),
   [checklist](examples/checklist.html), [bar-chart](examples/bar-chart.html),
-  [countdown](examples/countdown.html)
+  [countdown](examples/countdown.html), [token-comparison](examples/token-comparison.html)
 
 The CLI runs with `python3`, reads the files you pass it, and calls only the Telegram Bot API. It
 writes nothing but a temporary file for `node --check` and the screenshot you ask `render` for,

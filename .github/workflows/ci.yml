@@ -69,3 +69,23 @@ jobs:
         with:
           name: example-screenshots
           path: shots/
+
+  slow-layout:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Check out Telegram's widget sandbox v0.6.1
+        uses: actions/checkout@v5
+        with:
+          repository: TelegramMessenger/widget-sandbox
+          ref: 3acba1b62093c83815d38603d26f48c4f26a94c2
+          path: .widget-sandbox
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Draw and update example widgets with a slow host
+        working-directory: .widget-sandbox
+        run: |
+          npx --yes pnpm@12.10.1 install --frozen-lockfile
+          node --import tsx ../tests/slow-layout.mjs

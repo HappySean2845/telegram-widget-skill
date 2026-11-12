@@ -44,6 +44,8 @@ UNSUPPORTED = {
     "requestPointerLock": "pointer lock",
 }
 NAVIGATOR_UNSUPPORTED = {"clipboard", "share", "vibrate", "geolocation", "mediaDevices", "serviceWorker"}
+LAYOUT_SIZE_PROPERTIES = {"offsetWidth", "offsetHeight", "clientWidth", "clientHeight", "scrollWidth", "scrollHeight"}
+LAYOUT_RECT_METHODS = {"getBoundingClientRect", "getClientRects"}
 DIALOGS = {"alert", "confirm", "prompt"}
 UNSUPPORTED_EVENTS = {
     "touchstart", "touchmove", "touchend", "touchcancel", "keydown", "keyup", "keypress",
@@ -134,6 +136,11 @@ class ScriptChecker:
             if t.kind != "ident":
                 continue
             name = t.value
+
+            if after_dot and (name in LAYOUT_SIZE_PROPERTIES or (
+                name in LAYOUT_RECT_METHODS and nxt is not None and nxt.is_punct("(", "?.")
+            )):
+                self.report.warn("js-sync-layout", ".%s can wait for host layout" % name, t.line)
 
             if name in NETWORK:
                 self._err("js-network", "%s: widgets have no network access" % name, t)

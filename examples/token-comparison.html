@@ -1,0 +1,36 @@
+<style>
+body{margin:0;padding:10px 12px max(10px,env(safe-area-inset-bottom))}
+.row{display:flex;align-items:baseline;gap:8px;padding:5px 0;border-bottom:1px solid var(--tg-theme-section-separator-color)}
+.row>*{flex:1 1 0px;min-width:0;overflow-wrap:anywhere}
+.row b{font-variant-numeric:tabular-nums;text-align:right}
+.row b:first-of-type{text-align:center}
+</style>
+<div id="rows"></div>
+<script>
+const TW = window.TelegramWidget;
+function cell(tag, value) {
+  const e = document.createElement(tag);
+  e.textContent = value == null ? '—' : String(value);
+  return e;
+}
+function row(label, left, right) {
+  const e = document.createElement('div');
+  e.className = 'row';
+  e.appendChild(cell('span', label));
+  e.appendChild(cell('b', left));
+  e.appendChild(cell('b', right));
+  return e;
+}
+function draw() {
+  let s = null;
+  try { s = JSON.parse(TW && TW.chatData); } catch (e) {}
+  if (!s || !Array.isArray(s.rows)) return;
+  const rows = [row('', s.left, s.right)];
+  for (const item of s.rows) {
+    if (item) rows.push(row(item.metric, item.left, item.right));
+  }
+  document.getElementById('rows').replaceChildren(...rows);
+}
+if (TW) TW.onEvent('chatDataChanged', draw);
+draw();
+</script>

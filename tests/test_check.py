@@ -299,3 +299,21 @@ def test_alias_chains_and_returns_are_tracked():
     assert "js-computed-access" in errors
     errors, _ = rules(script("const TW = window.TelegramWidget;\nfunction g() { return TW; }"))
     assert "js-widget-escape" in errors
+
+
+@pytest.mark.parametrize("expr", [
+    "el.getBoundingClientRect().width", "el?.getClientRects()", "el.getBoundingClientRect?.()",
+    "el.offsetWidth", "el.clientHeight", "el.scrollWidth",
+])
+def test_sync_layout_warns_without_blocking(expr):
+    _, report = rules(script("const width = %s;" % expr))
+    assert report.ok
+    warnings = [w for w in report.warnings if w.rule == "js-sync-layout"]
+    assert len(warnings) == 1 and warnings[0].line == 2
+    assert "viewBox" in warnings[0].to_dict()["hint"]
+
+
+def test_layout_warning_ignores_strings_and_observer_entries():
+    _, report = rules(script("const label = 'el.offsetWidth'; // el.getBoundingClientRect()\n"
+                             "new ResizeObserver(entries => draw(entries[0].contentRect.width));"))
+    assert not any(issue.rule == "js-sync-layout" for issue in report.issues)

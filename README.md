@@ -128,12 +128,12 @@ private chat. Ask again later and it updates the same card.
 
 ## Templates
 
-Five templates ship with the skill. Each one is a single HTML file that draws from `chat_data`,
-weighs in at 1 to 1.3 KB compressed, and follows the user's Telegram theme.
+Six templates ship with the skill. Each draws from `chat_data` and follows the user's Telegram theme.
 
 | Template | For |
 |---|---|
-| [`price-snapshot`](examples/price-snapshot.html) | A stock, token or currency: price, change and sparkline |
+| [`price-snapshot`](examples/price-snapshot.html) | Price, change and an optional sparkline. Omit `h` in an edit to hide the line |
+| [`token-comparison`](examples/token-comparison.html) | Two tokens in aligned columns, with a dash for missing metrics |
 | [`poll-results`](examples/poll-results.html) | The outcome of a vote, with shares and a total |
 | [`checklist`](examples/checklist.html) | Progress on a list of tasks |
 | [`bar-chart`](examples/bar-chart.html) | A small labeled chart, one bar highlighted |
@@ -157,6 +157,7 @@ the caption, and sends nothing unless everything passes.
 | HTML and SVG | no form controls, media, iframes, external scripts or images, `data:` SVG images, presentational or focus attributes, `clipPath`, `mask`, SMIL or `foreignObject` |
 | CSS | no `vh` units, scrolling overflow, sticky positioning, logical properties, multi-column layout, `oklch()` or `color-mix()`, text shadows, line clamping, 3D transforms, unsupported filters, `clip-path`, masks, blend modes, named fonts, `@font-face`, `@import`, `@container`, `@layer`, nesting, `:has()`, `:focus`, hover or print media queries, or remote `url()` |
 | JavaScript | valid syntax (QuickJS, else Node, else a structural check); no network APIs, navigation, dialogs, clipboard, canvas read-back, WebGL, or touch, keyboard and scroll events |
+| Layout | Warns when JavaScript reads a size or rectangle synchronously. These reads can delay the first draw on Telegram clients |
 | Links | the strict policy below |
 | Limits | 2,000 nodes, 400 CSS rules, 32 `@keyframes`, 8,192 characters per attribute |
 
