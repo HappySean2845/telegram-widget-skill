@@ -94,7 +94,7 @@ this skill, then send it with `show_widget`, which also delivers the user's taps
 
 ## Files
 
-- [scripts/widget.py](scripts/widget.py): the CLI (`check`, `send`, `edit`, `render`); its code is in `scripts/tgwidget/`
+- [scripts/widget.py](scripts/widget.py): the CLI (`check`, `send`, `edit`, `render`), with its modules in the folder beside it
 - [references/widget-rules.md](references/widget-rules.md): the widget rules, for writing a new widget
 - Templates, each an `.html` with a sample `.json` state:
   [price-snapshot](examples/price-snapshot.html), [poll-results](examples/poll-results.html),
