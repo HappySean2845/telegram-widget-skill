@@ -2,6 +2,19 @@
 
 What has been tested, how, and what has not. Newest results first.
 
+## ClawHub (2026-11-12)
+
+| Version | Result |
+|---|---|
+| 1.0.0 | ClawScan `suspicious`: `edit` did not limit itself to private chats, a Hermes topic could be overridden, and `TG_WIDGETS_API_BASE` could send the token to any host. All three fixed in 1.0.1. |
+| 1.0.1 | ClawScan `suspicious`: `const w = window; w.open(url)` passed the validator. Fixed in 1.0.2, with 17 bypass forms as regression tests. |
+| 1.0.2 | ClawScan `benign`, security audit [Safe](https://clawhub.ai/happysean2845/skills/telegram-widget-skill/security-audit?version=1.0.2). Installs from ClawHub verified in OpenClaw 2026.11.3 (`openclaw skills install @happysean2845/telegram-widget-skill`, ready) and Hermes Agent v0.23.1 (`hermes skills install clawhub/telegram-widget-skill`, scan `SAFE`, allowed). |
+
+The remaining SkillSpector notes on 1.0.2 describe what the tool is for, not defects: the bot token
+reaches the network (it is sent to `api.telegram.org`, which is the point), the CLI reads environment
+variables and writes a temporary file for `node --check`, it runs `node` with an argument list (no
+shell), and an error message contains the words "allowlist is empty".
+
 ## Real Telegram (2026-11-11)
 
 A test bot in a private chat, against Telegram's production servers.

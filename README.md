@@ -8,6 +8,7 @@
 [![Telegram Bot API 10.4](https://img.shields.io/badge/Telegram%20Bot%20API-10.4-26A5E4?logo=telegram&logoColor=white)](https://core.telegram.org/bots/api-changelog)
 [![Hermes Agent](https://img.shields.io/badge/Hermes%20Agent-skill-6E56CF)](https://github.com/NousResearch/hermes-agent)
 [![OpenClaw](https://img.shields.io/badge/OpenClaw-skill-E8590C)](https://github.com/openclaw/openclaw)
+[![ClawHub](https://img.shields.io/badge/ClawHub-telegram--widget--skill-1F2937)](https://clawhub.ai/happysean2845/skills/telegram-widget-skill)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-3776AB?logo=python&logoColor=white)](pyproject.toml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-2EA44F)](LICENSE)
 
@@ -102,11 +103,14 @@ including network failures.
 
 ```bash
 # Hermes Agent
-hermes skills install HappySean2845/telegram-widget-skill/
+hermes skills install clawhub/telegram-widget-skill
 
 # OpenClaw
-openclaw skills install git:HappySean2845/telegram-widget-skill@main
+openclaw skills install @happysean2845/telegram-widget-skill
 ```
+
+Both commands install from [ClawHub](https://clawhub.ai/happysean2845/skills/telegram-widget-skill), where the skill passed the registry's
+[security audit](https://clawhub.ai/happysean2845/skills/telegram-widget-skill/security-audit?version=1.0.2). Installing straight from GitHub works too: see [Installation](#installation).
 
 **2. Connect your bot.** Give the skill the token of the bot your agent already uses
 (details per framework under [Installation](#installation)):
@@ -197,7 +201,7 @@ a structural check.
 <summary><b>Hermes Agent</b></summary>
 
 ```bash
-hermes skills install HappySean2845/telegram-widget-skill/
+hermes skills install clawhub/telegram-widget-skill        # or from GitHub: HappySean2845/telegram-widget-skill/
 hermes config set TG_WIDGETS_BOT_TOKEN <the same token as TELEGRAM_BOT_TOKEN>
 hermes config set TG_WIDGETS_ALLOWED_LINKS "example.com t.me/YourBot"   # optional
 ```
@@ -207,8 +211,8 @@ hermes config set TG_WIDGETS_ALLOWED_LINKS "example.com t.me/YourBot"   # option
   loaded.
 - The current chat comes from the session (`HERMES_SESSION_CHAT_ID`). `send` targets it
   automatically and refuses any other chat.
-- Community skills are scanned on install; this one is rated `safe`. The installer fetches files
-  through the GitHub API; if it hits the rate limit, set `GITHUB_TOKEN` or log in with `gh`.
+- Community skills are scanned on install; this one is rated `safe`. The GitHub install fetches
+  files through the GitHub API; if it hits the rate limit, set `GITHUB_TOKEN` or log in with `gh`.
 - The skill is listed as `telegram-widget-skill`.
 
 </details>
@@ -217,7 +221,7 @@ hermes config set TG_WIDGETS_ALLOWED_LINKS "example.com t.me/YourBot"   # option
 <summary><b>OpenClaw</b></summary>
 
 ```bash
-openclaw skills install git:HappySean2845/telegram-widget-skill@main
+openclaw skills install @happysean2845/telegram-widget-skill   # or from git: git:HappySean2845/telegram-widget-skill@main
 ```
 
 Give the skill the bot token in `openclaw.json`:
@@ -281,8 +285,9 @@ Every command prints one JSON object and exits with `0` (ok), `1` (refused or fa
 |---|---|---|
 | Telegram Bot API | 10.4 | ✅ Verified against the production servers: send, update, size limits |
 | Telegram apps | | ✅ Verified in a real chat |
-| Hermes Agent | v0.23.1 | ✅ Installs from GitHub, passes the install scan, token reaches the skill |
-| OpenClaw | 2026.11.3 | ✅ Installs from git, ready with `python3` |
+| Hermes Agent | v0.23.1 | ✅ Installs from ClawHub and GitHub, passes the install scan, token reaches the skill |
+| OpenClaw | 2026.11.3 | ✅ Installs from ClawHub and git, ready with `python3` |
+| ClawHub | 1.0.2 | ✅ Security audit: Safe ([report](https://clawhub.ai/happysean2845/skills/telegram-widget-skill/security-audit?version=1.0.2)) |
 | Python | 3.9 to 3.13 | ✅ Tested in CI on every push |
 
 The full test record is in [docs/verification.md](docs/verification.md).

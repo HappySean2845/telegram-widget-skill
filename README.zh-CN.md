@@ -8,6 +8,7 @@
 [![Telegram Bot API 10.4](https://img.shields.io/badge/Telegram%20Bot%20API-10.4-26A5E4?logo=telegram&logoColor=white)](https://core.telegram.org/bots/api-changelog)
 [![Hermes Agent](https://img.shields.io/badge/Hermes%20Agent-skill-6E56CF)](https://github.com/NousResearch/hermes-agent)
 [![OpenClaw](https://img.shields.io/badge/OpenClaw-skill-E8590C)](https://github.com/openclaw/openclaw)
+[![ClawHub](https://img.shields.io/badge/ClawHub-telegram--widget--skill-1F2937)](https://clawhub.ai/happysean2845/skills/telegram-widget-skill)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-3776AB?logo=python&logoColor=white)](pyproject.toml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-2EA44F)](LICENSE)
 
@@ -94,11 +95,14 @@ bot token 只从环境变量读取，不会出现在任何输出、报错或日�
 
 ```bash
 # Hermes Agent
-hermes skills install HappySean2845/telegram-widget-skill/
+hermes skills install clawhub/telegram-widget-skill
 
 # OpenClaw
-openclaw skills install git:HappySean2845/telegram-widget-skill@main
+openclaw skills install @happysean2845/telegram-widget-skill
 ```
+
+两条命令都从 [ClawHub](https://clawhub.ai/happysean2845/skills/telegram-widget-skill) 安装，本 skill 已通过它的[安全审计](https://clawhub.ai/happysean2845/skills/telegram-widget-skill/security-audit?version=1.0.2)。
+也可以直接从 GitHub 安装，见[安装](#安装)。
 
 **2. 接上你的 bot。** 把 agent 正在用的那个 bot 的 token 交给 skill（各框架的细节见[安装](#安装)）：
 
@@ -178,7 +182,7 @@ agent 执行 shell 命令的环境里需要 `python3`（3.9 或更高），以�
 <summary><b>Hermes Agent</b></summary>
 
 ```bash
-hermes skills install HappySean2845/telegram-widget-skill/
+hermes skills install clawhub/telegram-widget-skill        # 或从 GitHub 装：HappySean2845/telegram-widget-skill/
 hermes config set TG_WIDGETS_BOT_TOKEN <和 TELEGRAM_BOT_TOKEN 相同的 token>
 hermes config set TG_WIDGETS_ALLOWED_LINKS "example.com t.me/YourBot"   # 可选
 ```
@@ -186,7 +190,7 @@ hermes config set TG_WIDGETS_ALLOWED_LINKS "example.com t.me/YourBot"   # 可选
 - Hermes 会刻意把 `TELEGRAM_BOT_TOKEN` 从每个工具子进程里删掉，所以 skill 声明了自己的变量
   `TG_WIDGETS_BOT_TOKEN`，skill 加载后 Hermes 会把它传进来。
 - 当前聊天来自会话（`HERMES_SESSION_CHAT_ID`），`send` 自动发往这里，并拒绝发往其他聊天。
-- Hermes 安装社区 skill 时会做安全扫描，本 skill 的评级是 `safe`。安装器通过 GitHub API 下载文件，
+- Hermes 安装社区 skill 时会做安全扫描，本 skill 的评级是 `safe`。从 GitHub 安装时会通过 GitHub API 下载文件，
   如果碰到限流，设置 `GITHUB_TOKEN` 或用 `gh` 登录即可。
 - skill 在列表里显示为 `telegram-widget-skill`。
 
@@ -196,7 +200,7 @@ hermes config set TG_WIDGETS_ALLOWED_LINKS "example.com t.me/YourBot"   # 可选
 <summary><b>OpenClaw</b></summary>
 
 ```bash
-openclaw skills install git:HappySean2845/telegram-widget-skill@main
+openclaw skills install @happysean2845/telegram-widget-skill   # 或从 git 装：git:HappySean2845/telegram-widget-skill@main
 ```
 
 在 `openclaw.json` 里把 bot token 交给 skill：
@@ -259,8 +263,9 @@ Telegram 报错时只返回 Telegram 的 `description`。
 |---|---|---|
 | Telegram Bot API | 10.4 | ✅ 已在生产服务器上验证：发送、更新、大小上限 |
 | Telegram 客户端 | | ✅ 已在真实聊天中验证 |
-| Hermes Agent | v0.23.1 | ✅ 可从 GitHub 安装，通过安装扫描，token 能传到 skill |
-| OpenClaw | 2026.11.3 | ✅ 可从 git 安装，有 `python3` 即就绪 |
+| Hermes Agent | v0.23.1 | ✅ 可从 ClawHub 和 GitHub 安装，通过安装扫描，token 能传到 skill |
+| OpenClaw | 2026.11.3 | ✅ 可从 ClawHub 和 git 安装，有 `python3` 即就绪 |
+| ClawHub | 1.0.2 | ✅ 安全审计结论 Safe（[报告](https://clawhub.ai/happysean2845/skills/telegram-widget-skill/security-audit?version=1.0.2)） |
 | Python | 3.9 到 3.13 | ✅ 每次推送都在 CI 中测试 |
 
 完整的测试记录见 [docs/verification.md](docs/verification.md)（英文）。
